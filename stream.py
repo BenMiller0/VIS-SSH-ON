@@ -26,13 +26,16 @@ thermal_ready = threading.Event()
 
 def capture_loop():
     global latest_frame
-    while not shutdown_event.is_set():
-        frame = picam2.capture_array()
-        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        _, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
-        with frame_lock:
-            latest_frame = buffer.tobytes()
-        frame_ready.set()
+    try:
+        while not shutdown_event.is_set():
+            frame = picam2.capture_array()
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            _, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
+            with frame_lock:
+                latest_frame = buffer.tobytes()
+            frame_ready.set()
+    except Exception as e:
+        print(f"[capture_loop ERROR] {e}")
 
 def thermal_loop():
     global latest_thermal

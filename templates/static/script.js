@@ -1,3 +1,28 @@
+// --- Visual feed ---
+const img = document.getElementById("feed");
+const dot = document.getElementById("dot");
+const statusText = document.getElementById("status-text");
+
+const ws = new WebSocket(`ws://${location.host}/ws`);
+ws.binaryType = "blob";
+
+ws.onopen = () => {
+  dot.classList.add("live");
+  statusText.textContent = "LIVE";
+};
+
+ws.onmessage = (e) => {
+  const url = URL.createObjectURL(e.data);
+  img.onload = () => URL.revokeObjectURL(url);
+  img.src = url;
+  img.classList.add("loaded");
+};
+
+ws.onclose = () => {
+  dot.classList.remove("live");
+  statusText.textContent = "DISCONNECTED";
+};
+
 // --- Thermal feed ---
 const canvas = document.getElementById("thermal");
 const ctx = canvas.getContext("2d");
@@ -6,7 +31,7 @@ const tempRange = document.getElementById("temp-range");
 canvas.width = 8;
 canvas.height = 8;
 
-const SMOOTH = 0.15; // lower = smoother, higher = more reactive
+const SMOOTH = 0.15;
 let smoothPixels = new Array(64).fill(25);
 let smoothMin = 20, smoothMax = 30;
 
@@ -36,12 +61,10 @@ wsThermal.onmessage = (e) => {
     const { pixels, thermistor } = JSON.parse(text);
     const flat = pixels.flat();
 
-    // Smooth each pixel
     for (let i = 0; i < 64; i++) {
       smoothPixels[i] += SMOOTH * (flat[i] - smoothPixels[i]);
     }
 
-    // Smooth the range
     const rawMin = Math.min(...flat);
     const rawMax = Math.max(...flat);
     smoothMin += SMOOTH * (rawMin - smoothMin);

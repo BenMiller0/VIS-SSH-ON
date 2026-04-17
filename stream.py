@@ -54,7 +54,7 @@ def thermal_loop():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print(">>>>> \033]8;;http://100.125.67.124:5000/\033\\Click here to open the camera feed\033]8;;\033\\ <<<<<")
+    print(">>>>> \033]8;;http://100.125.67.124:5000/\033\\Click here to open the live feed\033]8;;\033\\ <<<<<")
     picam2.configure(picam2.create_video_configuration(main={"size": (640, 480)}))
     picam2.start()
     t1 = threading.Thread(target=capture_loop, daemon=True)
@@ -114,4 +114,15 @@ async def thermal_websocket(websocket: WebSocket):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=5000, timeout_graceful_shutdown=2)
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--debug", action="store_true")
+    args = parser.parse_args()
+
+    if args.debug:
+        uvicorn.run(app, host="0.0.0.0", port=5000, timeout_graceful_shutdown=2)
+    else:
+        print("\n  vis-ssh-on started!")
+        print("  View feed at: http://100.125.67.124:5000/\n")
+        uvicorn.run(app, host="0.0.0.0", port=5000, timeout_graceful_shutdown=2, log_level="critical")

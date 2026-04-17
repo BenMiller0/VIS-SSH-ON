@@ -9,6 +9,7 @@ void setup() {
 
 void loop() {
     // uncomment the code below and upload it to the ESP 32 to make it blink, remotely!
+    // Build and compile with: pio run -t upload
     /*
 	digitalWrite(LED_PIN, HIGH);  
     delay(900);

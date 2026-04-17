@@ -1,8 +1,8 @@
 # REMOTE MONITERING EMBEDDED SYSTEMS PRODUCT
 
 ## Running camera
-1. Run `python3 stream.py`
-2. Open http://100.125.67.124:5000/ on whatever device your remoted in from
+1. Run `vis-ssh-on` or `vis-ssh-on --debug` 
+2. Click `Click here to open the live feed` or open http://100.125.67.124:5000/ in a web browser on whatever device your remoted in from
 
 
 ## Upload code remotely

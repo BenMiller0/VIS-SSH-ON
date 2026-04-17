@@ -12,6 +12,8 @@ import threading
 import asyncio
 import time
 import json
+import signal
+import sys
 
 picam2 = Picamera2()
 shutdown_event = threading.Event()
@@ -23,6 +25,20 @@ frame_ready = threading.Event()
 latest_thermal = None
 thermal_lock = threading.Lock()
 thermal_ready = threading.Event()
+
+def cleanup(signum=None, frame=None):
+    shutdown_event.set()
+    frame_ready.set()
+    thermal_ready.set()
+    try:
+        picam2.stop()
+        picam2.close()
+    except Exception:
+        pass
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, cleanup)
+signal.signal(signal.SIGINT, cleanup)
 
 def capture_loop():
     global latest_frame
@@ -54,21 +70,25 @@ def thermal_loop():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print(">>>>> \033]8;;http://100.125.67.124:5000/\033\\Click here to open the live feed\033]8;;\033\\ <<<<<")
-    picam2.configure(picam2.create_video_configuration(main={"size": (640, 480)}))
-    picam2.start()
     t1 = threading.Thread(target=capture_loop, daemon=True)
     t2 = threading.Thread(target=thermal_loop, daemon=True)
-    t1.start()
-    t2.start()
-    yield
-    shutdown_event.set()
-    frame_ready.set()
-    thermal_ready.set()
-    t1.join(timeout=3)
-    t2.join(timeout=3)
-    picam2.stop()
-    picam2.close()
+    try:
+        picam2.configure(picam2.create_video_configuration(main={"size": (640, 480)}))
+        picam2.start()
+        t1.start()
+        t2.start()
+        yield
+    finally:
+        shutdown_event.set()
+        frame_ready.set()
+        thermal_ready.set()
+        t1.join(timeout=3)
+        t2.join(timeout=3)
+        try:
+            picam2.stop()
+            picam2.close()
+        except Exception:
+            pass
 
 app = FastAPI(lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="templates/static"), name="static")

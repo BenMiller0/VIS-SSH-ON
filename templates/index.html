@@ -12,16 +12,9 @@
   <div class="terminal">
     <header>
       <span>VIS-SSH-ON ALPHA</span>
-      <div class="header-right">
-        <div id="test-status" class="test-status hidden">
-          <span class="dot test-dot"></span>
-          <span id="test-status-text">NO TEST</span>
-        </div>
-        <button class="init-btn" id="init-btn">INITIALIZE TEST</button>
-        <div class="status">
-          <span class="dot" id="dot"></span>
-          <span id="status-text">CONNECTING</span>
-        </div>
+      <div class="status">
+        <span class="dot" id="dot"></span>
+        <span id="status-text">CONNECTING</span>
       </div>
     </header>
     <div class="viewport">
@@ -30,62 +23,6 @@
       <div id="temp-range" class="temp-range"></div>
     </div>
   </div>
-
-  <!-- Modal -->
-  <div id="modal-overlay" class="modal-overlay hidden">
-    <div class="modal">
-      <div class="modal-header">
-        <span>INITIALIZE TEST</span>
-        <button class="modal-close" id="modal-close">✕</button>
-      </div>
-
-      <div class="modal-body">
-        <div class="field">
-          <label for="test-name">TEST NAME</label>
-          <input type="text" id="test-name" placeholder="e.g. THERMAL_RUN_01" autocomplete="off"/>
-        </div>
-
-        <div class="field checkbox-field">
-          <label for="collect-thermal">COLLECT THERMAL DATA</label>
-          <input type="checkbox" id="collect-thermal"/>
-        </div>
-
-        <div class="field-row">
-          <div class="field">
-            <label for="start-time">START TIME</label>
-            <input type="datetime-local" id="start-time"/>
-          </div>
-          <div class="field">
-            <label for="end-time">END TIME <span class="optional">(OPTIONAL)</span></label>
-            <input type="datetime-local" id="end-time"/>
-          </div>
-        </div>
-
-        <div class="modal-actions">
-          <button class="modal-btn secondary" id="custom-metric-btn">CUSTOM TEST METRIC</button>
-          <button class="modal-btn secondary" id="fail-criteria-btn">FAIL CRITERIA</button>
-        </div>
-
-        <div id="fail-criteria-panel" class="fail-criteria-panel hidden">
-          <p>
-            FAIL CRITERIA allows you to define a threshold that will <span class="highlight">automatically terminate</span> the test if reached.
-          </p>
-          <p>You can set:</p>
-          <ul>
-            <li>A <span class="highlight">custom temperature threshold</span> — e.g. kill test if any pixel exceeds 80°C</li>
-            <li>A <span class="highlight">custom metric threshold</span> — any user-defined value tied to test data</li>
-          </ul>
-          <p class="coming-soon">Configuration coming in a future sprint.</p>
-        </div>
-
-        <div class="modal-submit">
-          <button class="modal-btn danger" id="end-btn" disabled>END TEST</button>
-          <button class="modal-btn primary" id="start-btn">START TEST</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <script src="/static/script.js"></script>
 </body>
 </html>

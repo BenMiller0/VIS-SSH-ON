@@ -1,328 +1,270 @@
-/* ── Variables ────────────────────────────────────────────────────────────── */
 :root {
-  --g:       #00ff88;
-  --g-dim:   rgba(0,255,136,.25);
-  --g-faint: rgba(0,255,136,.06);
-  --g-dark:  rgba(0,255,136,.12);
-  --red:     #ff4040;
-  --amber:   #ffa500;
-  --bg:      #030d06;
-  --bg1:     #061009;
-  --bg2:     #040c07;
-  --border:  rgba(0,255,136,.15);
-  --mono:    'JetBrains Mono', 'Courier New', monospace;
-  --head:    'Orbitron', sans-serif;
+  --green: #00ff88;
+  --red: #ff3b3b;
+  --bg: #020a06;
+  --border: #00ff8833;
 }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 body {
   background: var(--bg);
-  color: var(--g);
-  font-family: var(--head);
+  color: var(--green);
+  font-family: 'Orbitron', sans-serif;
   height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
 }
 
-/* ── Main terminal ────────────────────────────────────────────────────────── */
 .terminal {
   width: min(900px, 96vw);
   display: flex;
   flex-direction: column;
   gap: 8px;
-  animation: fadeUp .7s ease both;
+  animation: fadeIn 0.8s ease;
 }
 
 header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 9px 14px;
+  padding: 8px 14px;
   border: 1px solid var(--border);
-  background: var(--bg1);
-  font-size: 10px;
-  letter-spacing: .15em;
+  background: #050f08;
+  font-size: 11px;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
 }
 
-.status { display: flex; align-items: center; gap: 8px; }
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
 .dot {
-  width: 8px; height: 8px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--red);
   box-shadow: 0 0 6px var(--red);
   animation: blink 1.2s ease-in-out infinite;
 }
+
 .dot.live {
-  background: var(--g);
-  box-shadow: 0 0 8px var(--g);
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
   animation: blink 2s ease-in-out infinite;
 }
 
 .viewport {
-  position: relative; width: 100%; aspect-ratio: 4/3;
-  background: #000; border: 1px solid var(--border); overflow: hidden;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4/3;
+  background: #000;
+  border: 1px solid var(--border);
+  overflow: hidden;
 }
-#feed { width:100%; height:100%; object-fit:cover; display:block; opacity:0; transition:opacity .6s; }
-#feed.loaded { opacity: 1; }
-#thermal {
-  position:absolute; bottom:14px; left:14px;
-  width:80px; height:80px; image-rendering:pixelated;
-  border:1px solid var(--border); z-index:4;
-}
-.temp-range { position:absolute; bottom:4px; left:14px; font-size:8px; opacity:.5; z-index:5; }
 
-/* ── Open-editor button ───────────────────────────────────────────────────── */
+#feed {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+#feed.loaded {
+  opacity: 1;
+}
+
+#thermal {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  width: 80px;
+  height: 80px;
+  image-rendering: pixelated;
+  border: 1px solid var(--border);
+  z-index: 4;
+}
+
+.temp-range {
+  position: absolute;
+  bottom: 4px;
+  left: 14px;
+  font-size: 8px;
+  color: var(--green);
+  opacity: 0.5;
+  z-index: 5;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 .editor-btn {
   background: transparent;
-  border: 1px solid var(--g);
-  color: var(--g);
-  padding: 6px 16px;
-  font-family: var(--head);
+  border: 1px solid var(--green);
+  color: var(--green);
+  padding: 6px 12px;
+  font-family: 'Orbitron', sans-serif;
   font-size: 9px;
-  letter-spacing: .12em;
-  text-transform: uppercase;
+  letter-spacing: 0.1em;
   cursor: pointer;
-  transition: background .2s, color .2s, box-shadow .2s;
+  transition: all 0.3s ease;
 }
+
 .editor-btn:hover {
-  background: var(--g);
+  background: var(--green);
   color: var(--bg);
-  box-shadow: 0 0 16px var(--g);
+  box-shadow: 0 0 10px var(--green);
 }
 
-/* ── Editor shell (the white box inside the backdrop) ────────────────────── */
-.editor-shell {
-  width: min(820px, 92vw);
-  height: min(660px, 88vh);
-  background: var(--bg1);
-  border: 1px solid var(--g-dim);
-  box-shadow: 0 0 80px rgba(0,255,136,.07);
-  overflow: hidden;
-  animation: shellIn .15s ease both;
-}
-
-/* ── Modal top bar (shared by both screens) ───────────────────────────────── */
-.modal-bar {
-  display: flex;
+.editor-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 1000;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  height: 46px;
-  min-height: 46px;
-  background: var(--bg2);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+  justify-content: center;
 }
 
-.bar-title {
-  font-size: 9px;
-  letter-spacing: .2em;
-  color: var(--g);
-  opacity: .6;
+.editor-modal.active {
+  display: flex;
 }
 
-.bar-left  { display: flex; align-items: center; gap: 14px; flex: 1; overflow: hidden; }
-.bar-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-
-.bar-file {
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--g);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* ── Bar buttons ──────────────────────────────────────────────────────────── */
-.bar-close, .bar-back {
-  background: transparent;
-  border: 1px solid transparent;
-  color: rgba(0,255,136,.4);
-  font-family: var(--head);
-  font-size: 9px;
-  letter-spacing: .08em;
-  padding: 4px 8px;
-  cursor: pointer;
-  transition: color .15s, border-color .15s, background .15s;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-.bar-close:hover {
-  color: var(--red);
-  border-color: rgba(255,64,64,.35);
-  background: rgba(255,64,64,.06);
-}
-.bar-back:hover {
-  color: var(--g);
-  border-color: var(--g-dim);
-  background: var(--g-faint);
-}
-
-.bar-save {
-  background: transparent;
-  border: 1px solid var(--g-dim);
-  color: var(--g);
-  font-family: var(--head);
-  font-size: 8px;
-  letter-spacing: .14em;
-  padding: 5px 16px;
-  cursor: pointer;
-  transition: all .15s;
-  white-space: nowrap;
-}
-.bar-save:hover {
-  background: var(--g);
-  color: var(--bg);
-  border-color: var(--g);
-  box-shadow: 0 0 12px var(--g);
-}
-.bar-save.dirty {
-  color: var(--amber);
-  border-color: rgba(255,165,0,.4);
-}
-.bar-save.dirty:hover {
-  background: var(--amber);
-  color: var(--bg);
-  border-color: var(--amber);
-  box-shadow: 0 0 10px var(--amber);
-}
-.bar-save:disabled { opacity: .35; cursor: default; pointer-events: none; }
-
-.save-status {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: .06em;
-  min-width: 60px;
-  text-align: right;
-}
-.save-status.ok  { color: var(--g); }
-.save-status.err { color: var(--red); }
-
-/* ── File list (Screen A) ─────────────────────────────────────────────────── */
-.file-list {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 20px 24px 28px;
+.editor-content {
+  width: min(1000px, 95vw);
+  height: min(700px, 90vh);
+  background: #050f08;
+  border: 1px solid var(--green);
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  box-shadow: 0 0 30px rgba(0, 255, 136, 0.2);
 }
-.file-list::-webkit-scrollbar        { width: 4px; }
-.file-list::-webkit-scrollbar-track  { background: transparent; }
-.file-list::-webkit-scrollbar-thumb  { background: var(--border); border-radius: 2px; }
 
-.fl-msg { font-size:11px; letter-spacing:.1em; opacity:.35; text-align:center; margin-top:32px; }
-.fl-msg.err { color: var(--red); opacity:.7; }
-
-.fl-group  { display:flex; flex-direction:column; gap:3px; }
-
-.fl-dir {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: .12em;
-  color: var(--g);
-  opacity: .28;
-  text-transform: uppercase;
-  padding: 0 2px 6px;
+.editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border);
-  margin-bottom: 2px;
+  background: #020a06;
 }
 
-.fl-row {
+.editor-header h2 {
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  color: var(--green);
+}
+
+.file-select {
+  background: #050f08;
+  border: 1px solid var(--border);
+  color: var(--green);
+  padding: 6px 10px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
+  cursor: pointer;
+  outline: none;
+}
+
+.file-select option {
+  background: #050f08;
+  color: var(--green);
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  color: var(--green);
+  font-size: 28px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 12px 14px;
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--g);
-  cursor: pointer;
-  width: 100%;
-  text-align: left;
-  transition: background .12s, border-color .12s;
-  font-family: inherit;
-}
-.fl-row:hover {
-  background: var(--g-faint);
-  border-color: var(--border);
-}
-.fl-row:hover .fl-arrow { opacity: 1; transform: translateX(0); }
-.fl-row:hover .fl-ext   { opacity: 1; }
-
-.fl-ext {
-  font-family: var(--mono);
-  font-size: 8px;
-  letter-spacing: .08em;
-  background: rgba(0,255,136,.15);
-  color: var(--g);
-  border: 1px solid var(--g-dim);
-  padding: 2px 7px;
-  min-width: 38px;
-  text-align: center;
-  flex-shrink: 0;
-  opacity: .7;
-  transition: opacity .12s;
+  justify-content: center;
+  transition: all 0.3s ease;
 }
 
-.fl-name {
-  font-family: var(--mono);
-  font-size: 14px;
-  letter-spacing: .02em;
+.close-btn:hover {
+  color: var(--red);
+  transform: rotate(90deg);
+}
+
+.editor-body {
   flex: 1;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  position: relative;
 }
 
-.fl-arrow {
-  font-family: var(--head);
-  font-size: 8px;
-  letter-spacing: .12em;
-  opacity: 0;
-  transform: translateX(-8px);
-  transition: opacity .12s, transform .12s;
-  flex-shrink: 0;
-}
-
-/* ── Editor (Screen B) ────────────────────────────────────────────────────── */
-.cm-wrap {
-  flex: 1;
-  overflow: hidden;
-  min-height: 0;
-}
-.cm-wrap .CodeMirror {
+.editor-body .CodeMirror {
   height: 100%;
-  font-family: var(--mono);
+  font-family: 'Courier New', monospace;
   font-size: 13px;
-  line-height: 1.65;
 }
 
-.editor-hint {
-  padding: 5px 16px;
-  font-size: 8px;
-  letter-spacing: .1em;
-  color: var(--g);
-  opacity: .2;
-  background: var(--bg2);
+.editor-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
   border-top: 1px solid var(--border);
-  flex-shrink: 0;
+  background: #020a06;
 }
 
-/* ── Animations ───────────────────────────────────────────────────────────── */
-@keyframes blink {
-  0%,100% { opacity:1; } 50% { opacity:.15; }
+.save-btn {
+  background: transparent;
+  border: 1px solid var(--green);
+  color: var(--green);
+  padding: 8px 20px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
-@keyframes fadeUp {
-  from { opacity:0; transform:translateY(8px); }
-  to   { opacity:1; transform:none; }
+
+.save-btn:hover {
+  background: var(--green);
+  color: var(--bg);
+  box-shadow: 0 0 10px var(--green);
 }
-@keyframes shellIn {
-  from { opacity:0; transform:scale(.97) translateY(8px); }
-  to   { opacity:1; transform:none; }
+
+.save-status {
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.save-status.show {
+  opacity: 1;
+}
+
+.save-status.success {
+  color: var(--green);
+}
+
+.save-status.error {
+  color: var(--red);
 }

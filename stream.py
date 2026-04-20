@@ -3,6 +3,8 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi import Request
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from picamera2 import Picamera2
 import board
 import busio
@@ -14,6 +16,7 @@ import time
 import json
 import signal
 import sys
+import os
 
 picam2 = Picamera2()
 shutdown_event = threading.Event()
@@ -131,6 +134,44 @@ async def thermal_websocket(websocket: WebSocket):
                 await websocket.send_bytes(data)
     except WebSocketDisconnect:
         pass
+
+class FileContent(BaseModel):
+    content: str
+
+EMBEDDED_SOFTWARE_DIR = "embedded_software"
+
+@app.get("/api/files")
+def list_files():
+    files = []
+    for root, dirs, filenames in os.walk(EMBEDDED_SOFTWARE_DIR):
+        for filename in filenames:
+            full_path = os.path.join(root, filename)
+            rel_path = os.path.relpath(full_path, EMBEDDED_SOFTWARE_DIR)
+            files.append(rel_path)
+    return {"files": files}
+
+@app.get("/api/files/{file_path:path}")
+def read_file(file_path: str):
+    safe_path = os.path.join(EMBEDDED_SOFTWARE_DIR, file_path)
+    if not os.path.exists(safe_path):
+        return JSONResponse(status_code=404, content={"error": "File not found"})
+    try:
+        with open(safe_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return {"path": file_path, "content": content}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.post("/api/files/{file_path:path}")
+def write_file(file_path: str, file_content: FileContent):
+    safe_path = os.path.join(EMBEDDED_SOFTWARE_DIR, file_path)
+    try:
+        os.makedirs(os.path.dirname(safe_path), exist_ok=True)
+        with open(safe_path, 'w', encoding='utf-8') as f:
+            f.write(file_content.content)
+        return {"success": True, "path": file_path}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 if __name__ == "__main__":
     import uvicorn

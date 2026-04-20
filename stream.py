@@ -225,7 +225,22 @@ def write_file(file_path: str, body: FileContent):
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
+@app.delete("/api/files/{file_path:path}")
+def delete_file(file_path: str):
+    base      = os.path.abspath(EMBEDDED_SOFTWARE_DIR)
+    safe_path = os.path.normpath(os.path.join(base, file_path))
+    if not safe_path.startswith(base):
+        return JSONResponse(status_code=403, content={"error": "Forbidden"})
+    if not os.path.isfile(safe_path):
+        return JSONResponse(status_code=404, content={"error": "Not found"})
+    try:
+        os.remove(safe_path)
+        return {"success": True, "path": file_path}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
 # ── Entry point ────────────────────────────────────────────────────────────────
+
 if __name__ == "__main__":
     import uvicorn, argparse
     parser = argparse.ArgumentParser()

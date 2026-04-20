@@ -58,7 +58,16 @@
       <div id="screen-picker" style="display:flex; flex-direction:column; height:100%;">
         <div class="modal-bar">
           <span class="bar-title">SELECT A FILE TO EDIT</span>
-          <button class="bar-close" id="close-picker">✕</button>
+          <div class="bar-right">
+            <button class="bar-new" id="toggle-new-file">+ NEW FILE</button>
+            <button class="bar-close" id="close-picker">✕</button>
+          </div>
+        </div>
+        <div id="new-file-row" class="new-file-row" style="display:none;">
+          <input id="new-file-input" class="new-file-input"
+                 type="text" placeholder="e.g. src/sensors.cpp" spellcheck="false" autocomplete="off"/>
+          <button id="new-file-confirm" class="bar-new confirm">CREATE</button>
+          <span id="new-file-err" class="new-file-err"></span>
         </div>
         <div id="file-list" class="file-list"></div>
       </div>

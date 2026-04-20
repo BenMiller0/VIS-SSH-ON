@@ -1,131 +1,217 @@
 'use strict';
 
-// ── State ─────────────────────────────────────────────────────────────────────
-let editor        = null;
-let currentFile   = '';
-let unsaved       = false;
+document.addEventListener('DOMContentLoaded', () => {
 
-// ── DOM ───────────────────────────────────────────────────────────────────────
-const modal       = document.getElementById('editor-modal');
-const screenFiles = document.getElementById('screen-files');
-const screenEdit  = document.getElementById('screen-edit');
-const fileList    = document.getElementById('file-list');
-const editorTitle = document.getElementById('editor-title');
-const saveBtn     = document.getElementById('save-btn');
-const saveStatus  = document.getElementById('save-status');
-const backBtn     = document.getElementById('back-btn');
-const closeBtn    = document.getElementById('close-modal');
-const openBtn     = document.getElementById('editor-btn');
+  // ── DOM ─────────────────────────────────────────────────────────────────────
+  const modal          = document.getElementById('editor-modal');
+  const screenPicker   = document.getElementById('screen-picker');
+  const screenEditor   = document.getElementById('screen-editor');
+  const fileListEl     = document.getElementById('file-list');
+  const editorTitle    = document.getElementById('bar-filename');
+  const saveBtn        = document.getElementById('save-btn');
+  const saveStatusEl   = document.getElementById('save-status');
+  const backBtn        = document.getElementById('back-btn');
+  const closePicker    = document.getElementById('close-picker');
+  const closeEditor    = document.getElementById('close-editor');
+  const openBtn        = document.getElementById('editor-btn');
+  const toggleNewBtn   = document.getElementById('toggle-new-file');
+  const newFileRow     = document.getElementById('new-file-row');
+  const newFileInput   = document.getElementById('new-file-input');
+  const newFileConfirm = document.getElementById('new-file-confirm');
+  const newFileErr     = document.getElementById('new-file-err');
 
-// ── Filtering ─────────────────────────────────────────────────────────────────
-function isExcluded(filePath) {
-  return filePath.split(/[\/\\]/).some(seg =>
-    seg === '.pio' || seg.startsWith('.pio') || seg === '.git' || seg === '__pycache__'
-  );
-}
+  // Bail early with a clear message if anything is missing
+  const required = { modal, screenPicker, screenEditor, fileListEl, editorTitle,
+    saveBtn, saveStatusEl, backBtn, closePicker, closeEditor, openBtn,
+    toggleNewBtn, newFileRow, newFileInput, newFileConfirm, newFileErr };
+  for (const [id, el] of Object.entries(required)) {
+    if (!el) { console.error(`[editor] missing element: #${id}`); return; }
+  }
 
-// ── Screen transitions ────────────────────────────────────────────────────────
-function showFilePicker() {
-  screenEdit.classList.remove('active');
-  screenFiles.classList.add('active');
-}
+  // ── State ──────────────────────────────────────────────────────────────────
+  let cm          = null;
+  let currentFile = '';
+  let unsaved     = false;
 
-function showEditor() {
-  screenFiles.classList.remove('active');
-  screenEdit.classList.add('active');
-  setTimeout(() => editor && editor.refresh(), 20);
-}
+  // ── Screens ────────────────────────────────────────────────────────────────
+  function showPicker() {
+    screenEditor.style.display = 'none';
+    screenPicker.style.display = 'flex';
+    hideNewFileRow();
+  }
 
-// ── Modal open/close ──────────────────────────────────────────────────────────
-async function openModal() {
-  modal.classList.add('active');
-  showFilePicker();
-  await loadFileList();
-}
+  function showEditor() {
+    screenPicker.style.display = 'none';
+    screenEditor.style.display = 'flex';
+    requestAnimationFrame(() => cm && cm.refresh());
+  }
 
-function closeModal() {
-  if (unsaved && !confirm(`Discard unsaved changes to "${currentFile}"?`)) return;
-  modal.classList.remove('active');
-  unsaved = false;
-}
+  // ── Modal ──────────────────────────────────────────────────────────────────
+  async function openModal() {
+    modal.style.display = 'flex';
+    showPicker();
+    await loadFileList();
+  }
 
-// ── File list ─────────────────────────────────────────────────────────────────
-async function loadFileList() {
-  fileList.innerHTML = '<div class="file-msg">scanning…</div>';
-  try {
-    const res  = await fetch('/api/files');
-    const data = await res.json();
-    const files = data.files.filter(f => !isExcluded(f)).sort();
+  function closeModal() {
+    if (unsaved && !confirm(`Discard unsaved changes to "${currentFile}"?`)) return;
+    modal.style.display = 'none';
+    unsaved = false;
+  }
 
-    if (!files.length) {
-      fileList.innerHTML = '<div class="file-msg">no files found</div>';
-      return;
+  // ── New-file row ───────────────────────────────────────────────────────────
+  function showNewFileRow() {
+    newFileRow.style.display = 'flex';
+    newFileInput.value = '';
+    newFileErr.textContent = '';
+    newFileInput.focus();
+    toggleNewBtn.textContent = '✕ CANCEL';
+  }
+
+  function hideNewFileRow() {
+    newFileRow.style.display = 'none';
+    newFileInput.value = '';
+    newFileErr.textContent = '';
+    toggleNewBtn.textContent = '+ NEW FILE';
+  }
+
+  async function createNewFile() {
+    const raw = newFileInput.value.trim().replace(/\\/g, '/').replace(/^\/+/, '');
+    if (!raw)              return (newFileErr.textContent = 'Enter a filename.');
+    if (!raw.includes('.')) return (newFileErr.textContent = 'Include an extension (e.g. .cpp).');
+
+    newFileConfirm.disabled = true;
+    newFileErr.textContent  = '';
+    try {
+      const res = await fetch(`/api/files/${encodeURIComponent(raw)}`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ content: '' }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await loadFileList();
+      hideNewFileRow();
+      await openFile(raw);
+    } catch (err) {
+      newFileErr.textContent = 'Could not create file.';
+      console.error(err);
+    } finally {
+      newFileConfirm.disabled = false;
     }
+  }
 
-    // Group by directory
-    const groups = {};
-    files.forEach(f => {
-      const parts = f.replace(/\\/g, '/').split('/');
-      const dir   = parts.length > 1 ? parts.slice(0, -1).join('/') : '';
-      const name  = parts[parts.length - 1];
-      (groups[dir] = groups[dir] || []).push({ name, path: f });
-    });
+  // ── File list ──────────────────────────────────────────────────────────────
+  function isExcluded(p) {
+    return p.split(/[/\\]/).some(s => s === '.pio' || s === '.git' || s === '__pycache__');
+  }
 
-    fileList.innerHTML = '';
-    Object.entries(groups).forEach(([dir, items], gi) => {
-      const group = document.createElement('div');
-      group.className = 'file-group';
-      group.style.animationDelay = `${gi * 40}ms`;
+  async function loadFileList() {
+    fileListEl.innerHTML = '<div class="file-msg">scanning…</div>';
+    try {
+      const data  = await fetch('/api/files').then(r => r.json());
+      const files = data.files.filter(f => !isExcluded(f)).sort();
 
-      if (dir) {
-        const label = document.createElement('div');
-        label.className = 'group-label';
-        label.textContent = dir + '/';
-        group.appendChild(label);
+      if (!files.length) {
+        fileListEl.innerHTML = '<div class="file-msg">no files found</div>';
+        return;
       }
 
-      items.forEach(({ name, path }, fi) => {
-        const ext = name.includes('.') ? name.split('.').pop().toUpperCase() : '?';
-        const btn = document.createElement('button');
-        btn.className = 'file-row';
-        btn.style.animationDelay = `${(gi * items.length + fi) * 30}ms`;
-        btn.innerHTML =
-          `<span class="ext-badge">${ext}</span>` +
-          `<span class="fname">${name}</span>` +
-          `<span class="fopen">OPEN →</span>`;
-        btn.addEventListener('click', () => openFile(path));
-        group.appendChild(btn);
+      const groups = {};
+      for (const f of files) {
+        const norm  = f.replace(/\\/g, '/');
+        const slash = norm.lastIndexOf('/');
+        const dir   = slash >= 0 ? norm.slice(0, slash) : '';
+        const name  = norm.slice(slash + 1);
+        (groups[dir] ??= []).push({ name, path: norm });
+      }
+
+      fileListEl.innerHTML = '';
+      Object.entries(groups).forEach(([dir, items], gi) => {
+        const group = document.createElement('div');
+        group.className = 'file-group';
+
+        if (dir) {
+          const lbl = document.createElement('div');
+          lbl.className   = 'group-label';
+          lbl.textContent = dir + '/';
+          group.appendChild(lbl);
+        }
+
+        items.forEach(({ name, path }) => {
+          const ext = name.includes('.') ? name.split('.').pop().toUpperCase() : '?';
+
+          const row = document.createElement('div');
+          row.className = 'file-row';
+
+          const openBtn2 = document.createElement('button');
+          openBtn2.className = 'file-row-open';
+          openBtn2.innerHTML =
+            `<span class="ext-badge">${ext}</span>` +
+            `<span class="fname">${name}</span>` +
+            `<span class="fopen">OPEN →</span>`;
+          openBtn2.addEventListener('click', () => openFile(path));
+
+          const del = document.createElement('button');
+          del.className   = 'file-row-delete';
+          del.textContent = '🗑';
+          del.title       = 'Delete file';
+          del.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteFile(path);
+          });
+
+          row.appendChild(openBtn2);
+          row.appendChild(del);
+          group.appendChild(row);
+        });
+
+        fileListEl.appendChild(group);
       });
 
-      fileList.appendChild(group);
-    });
-
-  } catch (err) {
-    fileList.innerHTML = '<div class="file-msg err">error loading files</div>';
-    console.error(err);
+    } catch (err) {
+      fileListEl.innerHTML = '<div class="file-msg err">error loading files</div>';
+      console.error(err);
+    }
   }
-}
 
-// ── Editor ────────────────────────────────────────────────────────────────────
-const MODE_MAP = {
-  cpp:'text/x-c++src', cc:'text/x-c++src', cxx:'text/x-c++src',
-  c:  'text/x-csrc',
-  h:  'text/x-c++src', hpp:'text/x-c++src',
-  ino:'text/x-c++src',
-  py: 'text/x-python',
-  js: 'text/javascript',
-  json:'application/json',
-};
+  // ── Delete file ────────────────────────────────────────────────────────────
+  async function deleteFile(filePath) {
+    if (!confirm(`Delete "${filePath}"? This cannot be undone.`)) return;
+    try {
+      const res = await fetch(`/api/files/${encodeURIComponent(filePath)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      // If the deleted file is currently open, go back to picker
+      if (currentFile === filePath) {
+        currentFile = '';
+        unsaved = false;
+        showPicker();
+      }
+      await loadFileList();
+    } catch (err) {
+      alert('Could not delete file: ' + err.message);
+      console.error(err);
+    }
+  }
 
-async function openFile(filePath) {
-  try {
-    const res  = await fetch(`/api/files/${encodeURIComponent(filePath)}`);
-    if (!res.ok) throw new Error('not found');
-    const data = await res.json();
+    // ── Editor ─────────────────────────────────────────────────────────────────
+  const MODE_MAP = {
+    cpp:'text/x-c++src', cc:'text/x-c++src', cxx:'text/x-c++src',
+    c:  'text/x-csrc',
+    h:  'text/x-c++src', hpp:'text/x-c++src',
+    ino:'text/x-c++src',
+    py: 'text/x-python',
+    js: 'text/javascript',
+    json:'application/json',
+  };
 
-    if (!editor) {
-      editor = CodeMirror.fromTextArea(
-        document.getElementById('code-editor'), {
+  async function openFile(filePath) {
+    try {
+      const res  = await fetch(`/api/files/${encodeURIComponent(filePath)}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      if (!cm) {
+        cm = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
           lineNumbers:       true,
           theme:             'dracula',
           tabSize:           4,
@@ -135,81 +221,99 @@ async function openFile(filePath) {
           matchBrackets:     true,
           autoCloseBrackets: true,
           extraKeys: {
-            'Ctrl-S': saveFile,
-            'Cmd-S':  saveFile,
-            'Tab': cm => cm.somethingSelected()
-              ? cm.indentSelection('add')
-              : cm.replaceSelection('    ', 'end'),
+            'Ctrl-S': () => saveFile(),
+            'Cmd-S':  () => saveFile(),
+            'Tab': c => c.somethingSelected()
+              ? c.indentSelection('add')
+              : c.replaceSelection('    ', 'end'),
           },
-        }
-      );
-      editor.on('change', () => { unsaved = true; updateSaveBtn(); });
+        });
+        cm.on('change', () => { unsaved = true; refreshSaveBtn(); });
+      }
+
+      cm.setOption('mode', MODE_MAP[filePath.split('.').pop().toLowerCase()] ?? 'text/x-c++src');
+      cm.setValue(data.content);
+      cm.clearHistory();
+
+      currentFile = filePath;
+      unsaved     = false;
+      refreshSaveBtn();
+      editorTitle.textContent = filePath;
+      showEditor();
+
+    } catch (err) {
+      console.error('[editor] openFile:', err);
+      alert('Could not open file: ' + err.message);
     }
-
-    const ext = filePath.split('.').pop().toLowerCase();
-    editor.setOption('mode', MODE_MAP[ext] || 'text/x-c++src');
-    editor.setValue(data.content);
-    editor.clearHistory();
-
-    currentFile = filePath;
-    unsaved     = false;
-    updateSaveBtn();
-    editorTitle.textContent = filePath.replace(/\\/g, '/');
-    showEditor();
-
-  } catch (err) {
-    console.error('openFile error:', err);
   }
-}
 
-async function saveFile() {
-  if (!currentFile || !editor) return;
-  saveBtn.disabled = true;
-  try {
-    const res = await fetch(`/api/files/${encodeURIComponent(currentFile)}`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ content: editor.getValue() }),
-    });
-    if (!res.ok) throw new Error();
+  async function saveFile() {
+    if (!currentFile || !cm) return;
+    saveBtn.disabled = true;
+    try {
+      const res = await fetch(`/api/files/${encodeURIComponent(currentFile)}`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ content: cm.getValue() }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      unsaved = false;
+      refreshSaveBtn();
+      showSaveStatus('saved', 'ok');
+    } catch (err) {
+      showSaveStatus('save failed', 'err');
+      console.error(err);
+    } finally {
+      saveBtn.disabled = false;
+    }
+  }
+
+  function refreshSaveBtn() {
+    saveBtn.classList.toggle('dirty', unsaved);
+    saveBtn.textContent = unsaved ? '● SAVE' : 'SAVE';
+  }
+
+  let _statusTimer;
+  function showSaveStatus(msg, type) {
+    saveStatusEl.textContent = msg;
+    saveStatusEl.className   = `save-status ${type}`;
+    clearTimeout(_statusTimer);
+    _statusTimer = setTimeout(() => {
+      saveStatusEl.textContent = '';
+      saveStatusEl.className   = 'save-status';
+    }, 2500);
+  }
+
+  // ── Event wiring ───────────────────────────────────────────────────────────
+  openBtn.addEventListener('click', openModal);
+  closePicker.addEventListener('click', closeModal);
+  closeEditor.addEventListener('click', closeModal);
+  saveBtn.addEventListener('click', saveFile);
+  backBtn.addEventListener('click', () => {
+    if (unsaved && !confirm(`Discard unsaved changes to "${currentFile}"?`)) return;
     unsaved = false;
-    updateSaveBtn();
-    flashStatus('saved', 'ok');
-  } catch {
-    flashStatus('save failed', 'err');
-  } finally {
-    saveBtn.disabled = false;
-  }
-}
+    refreshSaveBtn();
+    showPicker();
+  });
 
-function updateSaveBtn() {
-  saveBtn.classList.toggle('dirty', unsaved);
-  saveBtn.textContent = unsaved ? '● SAVE' : 'SAVE';
-}
+  toggleNewBtn.addEventListener('click', () =>
+    newFileRow.style.display === 'none' ? showNewFileRow() : hideNewFileRow()
+  );
+  newFileConfirm.addEventListener('click', createNewFile);
+  newFileInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  createNewFile();
+    if (e.key === 'Escape') hideNewFileRow();
+  });
 
-function flashStatus(msg, type) {
-  saveStatus.textContent = msg;
-  saveStatus.className = `save-status on ${type}`;
-  clearTimeout(flashStatus._t);
-  flashStatus._t = setTimeout(() => { saveStatus.className = 'save-status'; }, 2500);
-}
+  modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 
-// ── Wiring ────────────────────────────────────────────────────────────────────
-openBtn.addEventListener('click', openModal);
-closeBtn.addEventListener('click', closeModal);
-saveBtn.addEventListener('click', saveFile);
+  document.addEventListener('keydown', e => {
+    if (modal.style.display === 'none') return;
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveFile(); }
+    if (e.key === 'Escape') {
+      if (newFileRow.style.display !== 'none') { hideNewFileRow(); return; }
+      closeModal();
+    }
+  });
 
-backBtn.addEventListener('click', () => {
-  if (unsaved && !confirm(`Discard unsaved changes to "${currentFile}"?`)) return;
-  unsaved = false;
-  updateSaveBtn();
-  showFilePicker();
-});
-
-modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
-
-document.addEventListener('keydown', e => {
-  if (!modal.classList.contains('active')) return;
-  if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveFile(); }
-  if (e.key === 'Escape') closeModal();
-});
+}); // end DOMContentLoaded

@@ -3,7 +3,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi import Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from picamera2 import Picamera2
 import board
@@ -96,9 +96,9 @@ app.mount("/static", StaticFiles(directory="templates/static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 EMBEDDED_SOFTWARE_DIR = "embedded_software"
-
-# Any directory with these names will be skipped entirely (not descended into)
 EXCLUDED_DIRS = {".pio", ".git", ".venv", "__pycache__", "node_modules", ".idea", ".vscode"}
+
+# ── Pages & streams ────────────────────────────────────────────────────────────
 
 @app.get("/")
 def home(request: Request):
@@ -138,16 +138,58 @@ async def ws_thermal(websocket: WebSocket):
     except WebSocketDisconnect:
         pass
 
+# ── Flash endpoint ─────────────────────────────────────────────────────────────
+
+@app.post("/api/flash")
+async def flash_firmware():
+    """
+    Stream `pio run -t upload` output line-by-line as Server-Sent Events.
+    Final event is either:  __OK__  or  __FAIL__
+    """
+    cwd = os.path.abspath(EMBEDDED_SOFTWARE_DIR)
+
+    async def generate():
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "pio", "run", "-t", "upload",
+                cwd=cwd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+            )
+            async for raw in proc.stdout:
+                line = raw.decode(errors="replace").rstrip()
+                # Escape for SSE: newlines inside a data value break the frame
+                safe = line.replace("\n", " ").replace("\r", "")
+                yield f"data: {safe}\n\n"
+            await proc.wait()
+            yield f"data: {'__OK__' if proc.returncode == 0 else '__FAIL__'}\n\n"
+        except FileNotFoundError:
+            yield "data: ERROR: 'pio' not found – is PlatformIO installed and on PATH?\n\n"
+            yield "data: __FAIL__\n\n"
+        except Exception as e:
+            yield f"data: ERROR: {e}\n\n"
+            yield "data: __FAIL__\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control":   "no-cache",
+            "X-Accel-Buffering": "no",   # disable nginx buffering if present
+        },
+    )
+
+# ── File API ───────────────────────────────────────────────────────────────────
+
 class FileContent(BaseModel):
     content: str
 
 @app.get("/api/files")
 def list_files():
-    base = os.path.abspath(EMBEDDED_SOFTWARE_DIR)
+    base  = os.path.abspath(EMBEDDED_SOFTWARE_DIR)
     files = []
     for root, dirs, filenames in os.walk(base):
-        # Mutating dirs[:] tells os.walk not to recurse into excluded dirs
-        dirs[:] = [d for d in dirs if d not in EXCLUDED_DIRS and not d.startswith('.')]
+        dirs[:] = [d for d in dirs if d not in EXCLUDED_DIRS and not d.startswith(".")]
         dirs.sort()
         for filename in sorted(filenames):
             rel = os.path.relpath(os.path.join(root, filename), base)
@@ -183,6 +225,7 @@ def write_file(file_path: str, body: FileContent):
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
+# ── Entry point ────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn, argparse
     parser = argparse.ArgumentParser()

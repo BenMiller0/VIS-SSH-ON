@@ -20,7 +20,10 @@
         <span class="dot" id="dot"></span>
         <span id="status-text">CONNECTING</span>
       </div>
-      <button id="editor-btn" class="editor-btn">✎ EDIT EMBEDDED CODE</button>
+      <div class="header-actions">
+        <button id="flash-btn"  class="action-btn" data-state="idle">⬡ FLASH CODE</button>
+        <button id="editor-btn" class="action-btn">✎ EDIT CODE</button>
+      </div>
     </header>
     <div class="viewport">
       <img id="feed"/>
@@ -29,16 +32,26 @@
     </div>
   </div>
 
+  <!-- ── Flash output modal ──────────────────────────────────────────────── -->
+  <div id="flash-modal"
+       style="display:none; position:fixed; inset:0; z-index:9999;
+              background:rgba(0,0,0,.9); align-items:center; justify-content:center;">
+    <div class="flash-shell">
+      <div class="flash-bar">
+        <span class="flash-bar-title">PIO UPLOAD OUTPUT</span>
+        <button id="flash-close" class="bar-close">✕</button>
+      </div>
+      <div id="flash-output" class="flash-output"></div>
+      <div class="flash-footer">
+        <span id="flash-status" class="flash-status"></span>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Editor modal ────────────────────────────────────────────────────── -->
-  <!--
-    position:fixed + inset:0 + z-index:9999 are inline so they can never be
-    overridden. JS toggles display between "none" and "flex".
-  -->
   <div id="editor-modal"
        style="display:none; position:fixed; inset:0; z-index:9999;
               background:rgba(0,0,0,0.88); align-items:center; justify-content:center;">
-
-    <!-- Shell: holds both screens, only one visible at a time -->
     <div class="editor-shell">
 
       <!-- Screen A: file picker -->
@@ -50,7 +63,7 @@
         <div id="file-list" class="file-list"></div>
       </div>
 
-      <!-- Screen B: editor (hidden until file chosen) -->
+      <!-- Screen B: editor -->
       <div id="screen-editor" style="display:none; flex-direction:column; height:100%;">
         <div class="modal-bar">
           <div class="bar-left">
@@ -66,7 +79,7 @@
         <div class="cm-wrap">
           <textarea id="code-editor"></textarea>
         </div>
-        <div class="editor-hint">Ctrl+S&nbsp;·&nbsp;save &nbsp;|&nbsp; Esc&nbsp;·&nbsp;close</div>
+        <div class="editor-hint">Ctrl+S · save &nbsp;|&nbsp; Esc · close</div>
       </div>
 
     </div>
@@ -80,5 +93,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script>
   <script src="/static/script.js"></script>
   <script src="/static/editor.js"></script>
+  <script src="/static/flash.js"></script>
 </body>
 </html>

@@ -3,7 +3,6 @@
   --g:       #00ff88;
   --g-dim:   rgba(0,255,136,.25);
   --g-faint: rgba(0,255,136,.06);
-  --g-dark:  rgba(0,255,136,.12);
   --red:     #ff4040;
   --amber:   #ffa500;
   --bg:      #030d06;
@@ -46,7 +45,10 @@ header {
   font-size: 10px;
   letter-spacing: .15em;
   text-transform: uppercase;
+  gap: 12px;
 }
+
+.header-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
 
 .status { display: flex; align-items: center; gap: 8px; }
 
@@ -76,26 +78,125 @@ header {
 }
 .temp-range { position:absolute; bottom:4px; left:14px; font-size:8px; opacity:.5; z-index:5; }
 
-/* ── Open-editor button ───────────────────────────────────────────────────── */
-.editor-btn {
+/* ── Action buttons (shared base) ────────────────────────────────────────── */
+.action-btn {
   background: transparent;
-  border: 1px solid var(--g);
+  border: 1px solid var(--g-dim);
   color: var(--g);
-  padding: 6px 16px;
+  padding: 6px 14px;
   font-family: var(--head);
   font-size: 9px;
   letter-spacing: .12em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: background .2s, color .2s, box-shadow .2s;
+  transition: background .2s, color .2s, border-color .2s, box-shadow .2s;
+  white-space: nowrap;
 }
-.editor-btn:hover {
+.action-btn:hover:not(:disabled) {
   background: var(--g);
   color: var(--bg);
-  box-shadow: 0 0 16px var(--g);
+  border-color: var(--g);
+  box-shadow: 0 0 14px var(--g);
+}
+.action-btn:disabled { cursor: default; }
+
+/* Flash button states */
+#flash-btn[data-state="running"] {
+  border-color: var(--amber);
+  color: var(--amber);
+  animation: pulse-amber 1s ease-in-out infinite;
+}
+#flash-btn[data-state="ok"] {
+  border-color: var(--g);
+  color: var(--bg);
+  background: var(--g);
+  box-shadow: 0 0 20px var(--g);
+}
+#flash-btn[data-state="fail"] {
+  border-color: var(--red);
+  color: var(--red);
+  box-shadow: 0 0 12px rgba(255,64,64,.4);
+}
+#flash-btn[data-state="fail"]:hover {
+  background: var(--red);
+  color: var(--bg);
+  border-color: var(--red);
 }
 
-/* ── Editor shell (the white box inside the backdrop) ────────────────────── */
+/* ── Flash output modal ───────────────────────────────────────────────────── */
+.flash-shell {
+  width: min(820px, 92vw);
+  height: min(560px, 82vh);
+  background: #0a0a0a;
+  border: 1px solid var(--g-dim);
+  box-shadow: 0 0 60px rgba(0,255,136,.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: shellIn .15s ease both;
+}
+
+.flash-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 44px;
+  min-height: 44px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.flash-bar-title {
+  font-size: 9px;
+  letter-spacing: .2em;
+  color: var(--g);
+  opacity: .55;
+}
+
+.flash-output {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 14px 18px 10px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: rgba(0,255,136,.75);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.flash-output::-webkit-scrollbar       { width: 4px; }
+.flash-output::-webkit-scrollbar-track { background: transparent; }
+.flash-output::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.fo-line     { white-space: pre-wrap; word-break: break-all; }
+.fo-line.ok  { color: var(--g); font-weight: 500; }
+.fo-line.err { color: var(--red); }
+.fo-line.dim { color: rgba(0,255,136,.35); }
+
+.flash-footer {
+  display: flex;
+  align-items: center;
+  padding: 8px 18px;
+  height: 38px;
+  min-height: 38px;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.flash-status {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .08em;
+}
+.flash-status.ok  { color: var(--g); }
+.flash-status.err { color: var(--red); }
+
+/* ── Editor shell ─────────────────────────────────────────────────────────── */
 .editor-shell {
   width: min(820px, 92vw);
   height: min(660px, 88vh);
@@ -106,7 +207,7 @@ header {
   animation: shellIn .15s ease both;
 }
 
-/* ── Modal top bar (shared by both screens) ───────────────────────────────── */
+/* ── Modal top bar (editor) ───────────────────────────────────────────────── */
 .modal-bar {
   display: flex;
   align-items: center;
@@ -118,27 +219,11 @@ header {
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
+.bar-title { font-size:9px; letter-spacing:.2em; color:var(--g); opacity:.6; }
+.bar-left  { display:flex; align-items:center; gap:14px; flex:1; overflow:hidden; }
+.bar-right { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+.bar-file  { font-family:var(--mono); font-size:12px; color:var(--g); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
-.bar-title {
-  font-size: 9px;
-  letter-spacing: .2em;
-  color: var(--g);
-  opacity: .6;
-}
-
-.bar-left  { display: flex; align-items: center; gap: 14px; flex: 1; overflow: hidden; }
-.bar-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-
-.bar-file {
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--g);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* ── Bar buttons ──────────────────────────────────────────────────────────── */
 .bar-close, .bar-back {
   background: transparent;
   border: 1px solid transparent;
@@ -152,16 +237,8 @@ header {
   flex-shrink: 0;
   white-space: nowrap;
 }
-.bar-close:hover {
-  color: var(--red);
-  border-color: rgba(255,64,64,.35);
-  background: rgba(255,64,64,.06);
-}
-.bar-back:hover {
-  color: var(--g);
-  border-color: var(--g-dim);
-  background: var(--g-faint);
-}
+.bar-close:hover { color:var(--red); border-color:rgba(255,64,64,.35); background:rgba(255,64,64,.06); }
+.bar-back:hover  { color:var(--g); border-color:var(--g-dim); background:var(--g-faint); }
 
 .bar-save {
   background: transparent;
@@ -175,154 +252,54 @@ header {
   transition: all .15s;
   white-space: nowrap;
 }
-.bar-save:hover {
-  background: var(--g);
-  color: var(--bg);
-  border-color: var(--g);
-  box-shadow: 0 0 12px var(--g);
-}
-.bar-save.dirty {
-  color: var(--amber);
-  border-color: rgba(255,165,0,.4);
-}
-.bar-save.dirty:hover {
-  background: var(--amber);
-  color: var(--bg);
-  border-color: var(--amber);
-  box-shadow: 0 0 10px var(--amber);
-}
-.bar-save:disabled { opacity: .35; cursor: default; pointer-events: none; }
+.bar-save:hover { background:var(--g); color:var(--bg); border-color:var(--g); box-shadow:0 0 12px var(--g); }
+.bar-save.dirty { color:var(--amber); border-color:rgba(255,165,0,.4); }
+.bar-save.dirty:hover { background:var(--amber); color:var(--bg); border-color:var(--amber); box-shadow:0 0 10px var(--amber); }
+.bar-save:disabled { opacity:.35; cursor:default; pointer-events:none; }
 
-.save-status {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: .06em;
-  min-width: 60px;
-  text-align: right;
-}
+.save-status { font-family:var(--mono); font-size:9px; letter-spacing:.06em; min-width:60px; text-align:right; }
 .save-status.ok  { color: var(--g); }
 .save-status.err { color: var(--red); }
 
-/* ── File list (Screen A) ─────────────────────────────────────────────────── */
+/* ── File list ────────────────────────────────────────────────────────────── */
 .file-list {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  flex: 1; overflow-y: auto; overflow-x: hidden;
   padding: 20px 24px 28px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  display: flex; flex-direction: column; gap: 20px;
 }
-.file-list::-webkit-scrollbar        { width: 4px; }
-.file-list::-webkit-scrollbar-track  { background: transparent; }
-.file-list::-webkit-scrollbar-thumb  { background: var(--border); border-radius: 2px; }
+.file-list::-webkit-scrollbar       { width:4px; }
+.file-list::-webkit-scrollbar-track { background:transparent; }
+.file-list::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
 
 .fl-msg { font-size:11px; letter-spacing:.1em; opacity:.35; text-align:center; margin-top:32px; }
-.fl-msg.err { color: var(--red); opacity:.7; }
-
-.fl-group  { display:flex; flex-direction:column; gap:3px; }
-
-.fl-dir {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: .12em;
-  color: var(--g);
-  opacity: .28;
-  text-transform: uppercase;
-  padding: 0 2px 6px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 2px;
-}
+.fl-msg.err { color:var(--red); opacity:.7; }
+.fl-group { display:flex; flex-direction:column; gap:3px; }
+.fl-dir { font-family:var(--mono); font-size:9px; letter-spacing:.12em; color:var(--g); opacity:.28; text-transform:uppercase; padding:0 2px 6px; border-bottom:1px solid var(--border); margin-bottom:2px; }
 
 .fl-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 12px 14px;
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--g);
-  cursor: pointer;
-  width: 100%;
-  text-align: left;
-  transition: background .12s, border-color .12s;
-  font-family: inherit;
+  display:flex; align-items:center; gap:14px;
+  padding:12px 14px;
+  background:transparent; border:1px solid transparent;
+  color:var(--g); cursor:pointer; width:100%; text-align:left;
+  transition:background .12s, border-color .12s;
+  font-family:inherit;
 }
-.fl-row:hover {
-  background: var(--g-faint);
-  border-color: var(--border);
-}
-.fl-row:hover .fl-arrow { opacity: 1; transform: translateX(0); }
-.fl-row:hover .fl-ext   { opacity: 1; }
+.fl-row:hover { background:var(--g-faint); border-color:var(--border); }
+.fl-row:hover .fl-arrow { opacity:1; transform:translateX(0); }
+.fl-row:hover .fl-ext   { opacity:1; }
 
-.fl-ext {
-  font-family: var(--mono);
-  font-size: 8px;
-  letter-spacing: .08em;
-  background: rgba(0,255,136,.15);
-  color: var(--g);
-  border: 1px solid var(--g-dim);
-  padding: 2px 7px;
-  min-width: 38px;
-  text-align: center;
-  flex-shrink: 0;
-  opacity: .7;
-  transition: opacity .12s;
-}
+.fl-ext { font-family:var(--mono); font-size:8px; letter-spacing:.08em; background:rgba(0,255,136,.12); color:var(--g); border:1px solid var(--g-dim); padding:2px 7px; min-width:38px; text-align:center; flex-shrink:0; opacity:.65; transition:opacity .12s; }
+.fl-name { font-family:var(--mono); font-size:14px; letter-spacing:.02em; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.fl-arrow { font-family:var(--head); font-size:8px; letter-spacing:.12em; opacity:0; transform:translateX(-8px); transition:opacity .12s, transform .12s; flex-shrink:0; }
 
-.fl-name {
-  font-family: var(--mono);
-  font-size: 14px;
-  letter-spacing: .02em;
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+/* ── CodeMirror wrap ──────────────────────────────────────────────────────── */
+.cm-wrap { flex:1; overflow:hidden; min-height:0; }
+.cm-wrap .CodeMirror { height:100%; font-family:var(--mono); font-size:13px; line-height:1.65; }
 
-.fl-arrow {
-  font-family: var(--head);
-  font-size: 8px;
-  letter-spacing: .12em;
-  opacity: 0;
-  transform: translateX(-8px);
-  transition: opacity .12s, transform .12s;
-  flex-shrink: 0;
-}
+.editor-hint { padding:5px 16px; font-size:8px; letter-spacing:.1em; color:var(--g); opacity:.2; background:var(--bg2); border-top:1px solid var(--border); flex-shrink:0; }
 
-/* ── Editor (Screen B) ────────────────────────────────────────────────────── */
-.cm-wrap {
-  flex: 1;
-  overflow: hidden;
-  min-height: 0;
-}
-.cm-wrap .CodeMirror {
-  height: 100%;
-  font-family: var(--mono);
-  font-size: 13px;
-  line-height: 1.65;
-}
-
-.editor-hint {
-  padding: 5px 16px;
-  font-size: 8px;
-  letter-spacing: .1em;
-  color: var(--g);
-  opacity: .2;
-  background: var(--bg2);
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-/* ── Animations ───────────────────────────────────────────────────────────── */
-@keyframes blink {
-  0%,100% { opacity:1; } 50% { opacity:.15; }
-}
-@keyframes fadeUp {
-  from { opacity:0; transform:translateY(8px); }
-  to   { opacity:1; transform:none; }
-}
-@keyframes shellIn {
-  from { opacity:0; transform:scale(.97) translateY(8px); }
-  to   { opacity:1; transform:none; }
-}
+/* ── Keyframes ────────────────────────────────────────────────────────────── */
+@keyframes blink       { 0%,100%{opacity:1} 50%{opacity:.15} }
+@keyframes fadeUp      { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+@keyframes shellIn     { from{opacity:0;transform:scale(.97) translateY(8px)} to{opacity:1;transform:none} }
+@keyframes pulse-amber { 0%,100%{box-shadow:0 0 0 rgba(255,165,0,0)} 50%{box-shadow:0 0 14px rgba(255,165,0,.5)} }

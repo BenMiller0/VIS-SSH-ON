@@ -4,13 +4,15 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>VIS-SSH-ON ALPHA</title>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
   <link rel="icon" type="image/x-icon" href="/static/favicon.png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/dracula.min.css">
 </head>
 <body>
+
+  <!-- ── Main feed ───────────────────────────────────────────────────────── -->
   <div class="terminal">
     <header>
       <span>VIS-SSH-ON ALPHA</span>
@@ -18,7 +20,7 @@
         <span class="dot" id="dot"></span>
         <span id="status-text">CONNECTING</span>
       </div>
-      <button id="editor-btn" class="editor-btn">EDIT CODE</button>
+      <button id="editor-btn" class="editor-btn">✎ EDIT EMBEDDED CODE</button>
     </header>
     <div class="viewport">
       <img id="feed"/>
@@ -27,25 +29,55 @@
     </div>
   </div>
 
-  <div id="editor-modal" class="editor-modal">
-    <div class="editor-content">
-      <div class="editor-header">
-        <h2>Embedded Software Editor</h2>
-        <select id="file-select" class="file-select"></select>
-        <button id="close-editor" class="close-btn">×</button>
+  <!-- ── Editor modal ────────────────────────────────────────────────────── -->
+  <!--
+    position:fixed + inset:0 + z-index:9999 are inline so they can never be
+    overridden. JS toggles display between "none" and "flex".
+  -->
+  <div id="editor-modal"
+       style="display:none; position:fixed; inset:0; z-index:9999;
+              background:rgba(0,0,0,0.88); align-items:center; justify-content:center;">
+
+    <!-- Shell: holds both screens, only one visible at a time -->
+    <div class="editor-shell">
+
+      <!-- Screen A: file picker -->
+      <div id="screen-picker" style="display:flex; flex-direction:column; height:100%;">
+        <div class="modal-bar">
+          <span class="bar-title">SELECT A FILE TO EDIT</span>
+          <button class="bar-close" id="close-picker">✕</button>
+        </div>
+        <div id="file-list" class="file-list"></div>
       </div>
-      <div class="editor-body">
-        <textarea id="code-editor"></textarea>
+
+      <!-- Screen B: editor (hidden until file chosen) -->
+      <div id="screen-editor" style="display:none; flex-direction:column; height:100%;">
+        <div class="modal-bar">
+          <div class="bar-left">
+            <button class="bar-back" id="back-btn">← FILES</button>
+            <span class="bar-file" id="bar-filename"></span>
+          </div>
+          <div class="bar-right">
+            <span id="save-status" class="save-status"></span>
+            <button class="bar-save" id="save-btn">SAVE</button>
+            <button class="bar-close" id="close-editor">✕</button>
+          </div>
+        </div>
+        <div class="cm-wrap">
+          <textarea id="code-editor"></textarea>
+        </div>
+        <div class="editor-hint">Ctrl+S&nbsp;·&nbsp;save &nbsp;|&nbsp; Esc&nbsp;·&nbsp;close</div>
       </div>
-      <div class="editor-footer">
-        <button id="save-btn" class="save-btn">SAVE</button>
-        <span id="save-status" class="save-status"></span>
-      </div>
+
     </div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/clike/clike.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/python/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script>
   <script src="/static/script.js"></script>
   <script src="/static/editor.js"></script>
 </body>

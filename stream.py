@@ -3,6 +3,8 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi import Request
+from fastapi.responses import JSONResponse, StreamingResponse
+from pydantic import BaseModel
 from picamera2 import Picamera2
 import board
 import busio
@@ -14,17 +16,16 @@ import time
 import json
 import signal
 import sys
+import os
 
 picam2 = Picamera2()
 shutdown_event = threading.Event()
-
-latest_frame = None
-frame_lock = threading.Lock()
-frame_ready = threading.Event()
-
+latest_frame   = None
+frame_lock     = threading.Lock()
+frame_ready    = threading.Event()
 latest_thermal = None
-thermal_lock = threading.Lock()
-thermal_ready = threading.Event()
+thermal_lock   = threading.Lock()
+thermal_ready  = threading.Event()
 
 def cleanup(signum=None, frame=None):
     shutdown_event.set()
@@ -38,20 +39,20 @@ def cleanup(signum=None, frame=None):
     sys.exit(0)
 
 signal.signal(signal.SIGTERM, cleanup)
-signal.signal(signal.SIGINT, cleanup)
+signal.signal(signal.SIGINT,  cleanup)
 
 def capture_loop():
     global latest_frame
     try:
         while not shutdown_event.is_set():
-            frame = picam2.capture_array()
-            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            _, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
+            frame  = picam2.capture_array()
+            frame  = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            _, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
             with frame_lock:
-                latest_frame = buffer.tobytes()
+                latest_frame = buf.tobytes()
             frame_ready.set()
     except Exception as e:
-        print(f"[capture_loop ERROR] {e}")
+        print(f"[capture_loop] {e}")
 
 def thermal_loop():
     global latest_thermal
@@ -60,8 +61,8 @@ def thermal_loop():
     time.sleep(0.1)
     while not shutdown_event.is_set():
         data = json.dumps({
-            "pixels": amg.pixels,
-            "thermistor": round(amg.temperature, 2)
+            "pixels":     amg.pixels,
+            "thermistor": round(amg.temperature, 2),
         }).encode()
         with thermal_lock:
             latest_thermal = data
@@ -94,12 +95,17 @@ app = FastAPI(lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="templates/static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+EMBEDDED_SOFTWARE_DIR = "embedded_software"
+EXCLUDED_DIRS = {".pio", ".git", ".venv", "__pycache__", "node_modules", ".idea", ".vscode"}
+
+# ── Pages & streams ────────────────────────────────────────────────────────────
+
 @app.get("/")
 def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
+async def ws_video(websocket: WebSocket):
     await websocket.accept()
     loop = asyncio.get_event_loop()
     try:
@@ -116,7 +122,7 @@ async def websocket_endpoint(websocket: WebSocket):
         pass
 
 @app.websocket("/ws/thermal")
-async def thermal_websocket(websocket: WebSocket):
+async def ws_thermal(websocket: WebSocket):
     await websocket.accept()
     loop = asyncio.get_event_loop()
     try:
@@ -132,17 +138,118 @@ async def thermal_websocket(websocket: WebSocket):
     except WebSocketDisconnect:
         pass
 
-if __name__ == "__main__":
-    import uvicorn
-    import argparse
+# ── Flash endpoint ─────────────────────────────────────────────────────────────
 
+@app.post("/api/flash")
+async def flash_firmware():
+    """
+    Stream `pio run -t upload` output line-by-line as Server-Sent Events.
+    Final event is either:  __OK__  or  __FAIL__
+    """
+    cwd = os.path.abspath(EMBEDDED_SOFTWARE_DIR)
+
+    async def generate():
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "pio", "run", "-t", "upload",
+                cwd=cwd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+            )
+            async for raw in proc.stdout:
+                line = raw.decode(errors="replace").rstrip()
+                # Escape for SSE: newlines inside a data value break the frame
+                safe = line.replace("\n", " ").replace("\r", "")
+                yield f"data: {safe}\n\n"
+            await proc.wait()
+            yield f"data: {'__OK__' if proc.returncode == 0 else '__FAIL__'}\n\n"
+        except FileNotFoundError:
+            yield "data: ERROR: 'pio' not found – is PlatformIO installed and on PATH?\n\n"
+            yield "data: __FAIL__\n\n"
+        except Exception as e:
+            yield f"data: ERROR: {e}\n\n"
+            yield "data: __FAIL__\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control":   "no-cache",
+            "X-Accel-Buffering": "no",   # disable nginx buffering if present
+        },
+    )
+
+# ── File API ───────────────────────────────────────────────────────────────────
+
+class FileContent(BaseModel):
+    content: str
+
+@app.get("/api/files")
+def list_files():
+    base  = os.path.abspath(EMBEDDED_SOFTWARE_DIR)
+    files = []
+    for root, dirs, filenames in os.walk(base):
+        dirs[:] = [d for d in dirs if d not in EXCLUDED_DIRS and not d.startswith(".")]
+        dirs.sort()
+        for filename in sorted(filenames):
+            rel = os.path.relpath(os.path.join(root, filename), base)
+            files.append(rel.replace(os.sep, "/"))
+    return {"files": files}
+
+@app.get("/api/files/{file_path:path}")
+def read_file(file_path: str):
+    base      = os.path.abspath(EMBEDDED_SOFTWARE_DIR)
+    safe_path = os.path.normpath(os.path.join(base, file_path))
+    if not safe_path.startswith(base):
+        return JSONResponse(status_code=403, content={"error": "Forbidden"})
+    if not os.path.isfile(safe_path):
+        return JSONResponse(status_code=404, content={"error": "Not found"})
+    try:
+        with open(safe_path, encoding="utf-8") as f:
+            content = f.read()
+        return {"path": file_path, "content": content}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.post("/api/files/{file_path:path}")
+def write_file(file_path: str, body: FileContent):
+    base      = os.path.abspath(EMBEDDED_SOFTWARE_DIR)
+    safe_path = os.path.normpath(os.path.join(base, file_path))
+    if not safe_path.startswith(base):
+        return JSONResponse(status_code=403, content={"error": "Forbidden"})
+    try:
+        os.makedirs(os.path.dirname(safe_path), exist_ok=True)
+        with open(safe_path, "w", encoding="utf-8") as f:
+            f.write(body.content)
+        return {"success": True, "path": file_path}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.delete("/api/files/{file_path:path}")
+def delete_file(file_path: str):
+    base      = os.path.abspath(EMBEDDED_SOFTWARE_DIR)
+    safe_path = os.path.normpath(os.path.join(base, file_path))
+    if not safe_path.startswith(base):
+        return JSONResponse(status_code=403, content={"error": "Forbidden"})
+    if not os.path.isfile(safe_path):
+        return JSONResponse(status_code=404, content={"error": "Not found"})
+    try:
+        os.remove(safe_path)
+        return {"success": True, "path": file_path}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+# ── Entry point ────────────────────────────────────────────────────────────────
+
+if __name__ == "__main__":
+    import uvicorn, argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
-
     if args.debug:
         uvicorn.run(app, host="0.0.0.0", port=5000, timeout_graceful_shutdown=2)
     else:
         print("\n  vis-ssh-on started!")
         print("  View feed at: http://100.125.67.124:5000/\n")
-        uvicorn.run(app, host="0.0.0.0", port=5000, timeout_graceful_shutdown=2, log_level="critical")
+        uvicorn.run(app, host="0.0.0.0", port=5000,
+                    timeout_graceful_shutdown=2, log_level="critical")

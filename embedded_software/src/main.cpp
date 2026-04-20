@@ -2,7 +2,7 @@
 constexpr int LED_PIN = 13;
 
 void setup() {
-    delay(2000);
+    delay(2000); // <---- DO NOT DELETE
     Serial.begin(115200);
     pinMode(LED_PIN, OUTPUT);
 }

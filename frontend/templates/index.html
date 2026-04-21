@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VIS-SSH-ON</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Share+Tech+Mono&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/dracula.min.css">
+</head>
+
+<body>
+    <header>
+        <h1>VIS-SSH-ON</h1>
+        <div class="header-actions">
+            <button id="flash-btn" class="action-btn" data-state="idle">⬡ FLASH CODE</button>
+            <button id="editor-btn" class="action-btn">✎ EDIT CODE</button>
+        </div>
+    </header>
+
+    <main>
+        <div class="status-bar">
+            Status: <span id="status" class="disconnected">Disconnected</span>
+        </div>
+        <div class="viewport">
+            <img id="image" height="400" />
+            <canvas id="heatmap" width="8" height="8"></canvas>
+        </div>
+        <div class="controls">
+            <button onclick="sendCommand(1)">Run Test</button>
+        </div>
+    </main>
+
+    <footer>
+        <div class="test-panel">
+            <div id="test-status">IDLE</div>
+            <div id="test-metrics"></div>
+        </div>
+    </footer>
+
+    <!-- ── Flash output modal ──────────────────────────────────────────────── -->
+    <div id="flash-modal" style="display:none; position:fixed; inset:0; z-index:9999;
+                background:rgba(0,0,0,.9); align-items:center; justify-content:center;">
+        <div class="flash-shell">
+            <div class="flash-bar">
+                <span class="flash-bar-title">PIO UPLOAD OUTPUT</span>
+                <button id="flash-close" class="bar-close">✕</button>
+            </div>
+            <div id="flash-output" class="flash-output"></div>
+            <div class="flash-footer">
+                <span id="flash-status" class="flash-status"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Editor modal ────────────────────────────────────────────────────── -->
+    <div id="editor-modal" style="display:none; position:fixed; inset:0; z-index:9999;
+                background:rgba(0,0,0,0.88); align-items:center; justify-content:center;">
+        <div class="editor-shell">
+
+            <!-- Screen A: file picker -->
+            <div id="screen-picker" style="display:flex; flex-direction:column; height:100%;">
+                <div class="modal-bar">
+                    <span class="bar-title">SELECT A FILE TO EDIT</span>
+                    <div class="bar-right">
+                        <button class="bar-new" id="toggle-new-file">+ NEW FILE</button>
+                        <button class="bar-close" id="close-picker">✕</button>
+                    </div>
+                </div>
+                <div id="new-file-row" class="new-file-row" style="display:none;">
+                    <input id="new-file-input" class="new-file-input" type="text" placeholder="e.g. src/sensors.cpp"
+                        spellcheck="false" autocomplete="off" />
+                    <button id="new-file-confirm" class="bar-new confirm">CREATE</button>
+                    <span id="new-file-err" class="new-file-err"></span>
+                </div>
+                <div id="file-list" class="file-list"></div>
+            </div>
+
+            <!-- Screen B: editor -->
+            <div id="screen-editor" style="display:none; flex-direction:column; height:100%;">
+                <div class="modal-bar">
+                    <div class="bar-left">
+                        <button class="bar-back" id="back-btn">← FILES</button>
+                        <span class="bar-file" id="bar-filename"></span>
+                    </div>
+                    <div class="bar-right">
+                        <span id="save-status" class="save-status"></span>
+                        <button class="bar-save" id="save-btn">SAVE</button>
+                        <button class="bar-close" id="close-editor">✕</button>
+                    </div>
+                </div>
+                <div class="cm-wrap">
+                    <textarea id="code-editor"></textarea>
+                </div>
+                <div class="editor-hint">Ctrl+S · save &nbsp;|&nbsp; Esc · close</div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/clike/clike.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script>
+    <script src="/static/script.js"></script>
+    <script src="/static/editor.js"></script>
+    <script src="/static/flash.js"></script>
+</body>
+
+</html>

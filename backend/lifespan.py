@@ -15,7 +15,7 @@ from contextlib import asynccontextmanager
 import cv2
 from fastapi import FastAPI
 
-from backend.hardware.provider import Camera, Thermal
+from backend.hardware.provider import Camera, Thermal, IS_PI
 
 # ── Hardware instances ────────────────────────────────────────────────────────
 camera  = Camera()
@@ -46,7 +46,10 @@ def _capture_loop() -> None:
     try:
         while not shutdown_event.is_set():
             frame = camera.capture_array()
-            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            # Picamera2 outputs RGB — convert to BGR for cv2.imencode.
+            # MockCamera (OpenCV) already outputs BGR — skip conversion.
+            if IS_PI:
+                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             _, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
             with frame_lock:
                 latest_frame = buf.tobytes()

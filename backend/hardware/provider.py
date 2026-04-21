@@ -3,15 +3,17 @@ backend/hardware/provider.py
 
 Selects real or mock hardware based on platform / environment.
 Set MOCK_HARDWARE=1 in your environment to force mock mode on any platform.
+
+Exports IS_PI so other modules (e.g. lifespan.py) can branch on it
+without duplicating the detection logic.
 """
 
 import os
 import platform
 
-_force_mock = os.environ.get("MOCK_HARDWARE", "0") == "1"
-_is_pi      = platform.system() == "Linux" and not _force_mock
+IS_PI: bool = platform.system() == "Linux" and os.environ.get("MOCK_HARDWARE", "0") != "1"
 
-if not _is_pi:
+if not IS_PI:
     from backend.hardware.mock_camera import MockCamera as Camera
     from backend.hardware.mock_camera_thermal import MockThermal as Thermal
 else:

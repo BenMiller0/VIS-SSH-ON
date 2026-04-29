@@ -25,3 +25,6 @@ class TestRunResponse(BaseModel):
     end_time: Optional[str]
     status: str
     failure_reason: Optional[str]
+
+class TestRunRequest(BaseModel):
+    duration: Optional[int] = None  # seconds; None means manual-only termination

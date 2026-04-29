@@ -89,7 +89,7 @@ main {
   animation: fadeIn 0.8s ease;
 
   .status-bar {
-    font-size: 11px;
+    font-size: 15px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     opacity: 0.7;
@@ -150,13 +150,13 @@ main {
 
     button {
       font-family: var(--font-mono);
-      font-size: 12px;
+      font-size: 16px;
       letter-spacing: 0.15em;
       text-transform: uppercase;
       background: transparent;
       border: 1px solid var(--green);
       color: var(--green);
-      padding: 8px 20px;
+      padding: 12px 28px;
       cursor: pointer;
       position: relative;
       overflow: hidden;
@@ -195,7 +195,7 @@ footer {
 
     &::before {
       content: '▸ TEST STATUS';
-      font-size: 9px;
+      font-size: 13px;
       letter-spacing: 0.2em;
       opacity: 0.4;
       margin-bottom: 6px;
@@ -203,7 +203,7 @@ footer {
 
     #test-status {
       font-family: var(--font-display);
-      font-size: 16px;
+      font-size: 22px;
       letter-spacing: 0.15em;
       font-weight: bold;
       margin-bottom: 4px;
@@ -211,6 +211,7 @@ footer {
 
       &.pass    { color: var(--green);  text-shadow: 0 0 10px var(--green-dim); }
       &.fail    { color: var(--red);    text-shadow: 0 0 10px rgba(255,59,59,0.4); }
+      &.killed  { color: var(--yellow); opacity: .7; }
       &.running {
         color: var(--yellow);
         text-shadow: 0 0 10px rgba(255,224,102,0.4);
@@ -219,7 +220,7 @@ footer {
     }
 
     #test-metrics {
-      font-size: 12px;
+      font-size: 16px;
       line-height: 1.7;
       opacity: 0.85;
       color: var(--green);
@@ -265,9 +266,9 @@ footer {
   background: transparent;
   border: 1px solid var(--border-bright);
   color: var(--green);
-  padding: 6px 14px;
+  padding: 8px 18px;
   font-family: var(--font-display);
-  font-size: 9px;
+  font-size: 13px;
   letter-spacing: .12em;
   text-transform: uppercase;
   cursor: pointer;
@@ -333,7 +334,7 @@ footer {
 }
 
 .flash-bar-title {
-  font-size: 9px;
+  font-size: 13px;
   letter-spacing: .2em;
   color: var(--green);
   opacity: .55;
@@ -345,7 +346,7 @@ footer {
   overflow-x: hidden;
   padding: 14px 18px 10px;
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 15px;
   line-height: 1.7;
   color: var(--green-dim);
   display: flex;
@@ -371,7 +372,7 @@ footer {
   flex-shrink: 0;
 }
 
-.flash-status            { font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em; }
+.flash-status            { font-family: var(--font-mono); font-size: 13px; letter-spacing: .08em; }
 .flash-status.ok         { color: var(--green); }
 .flash-status.err        { color: var(--red); }
 
@@ -394,16 +395,16 @@ footer {
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  height: 46px;
-  min-height: 46px;
+  height: 56px;
+  min-height: 56px;
   background: var(--bg-dark);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
-.bar-title { font-size: 9px; letter-spacing: .2em; color: var(--green); opacity: .6; }
+.bar-title { font-size: 13px; letter-spacing: .2em; color: var(--green); opacity: .6; }
 .bar-left  { display: flex; align-items: center; gap: 14px; flex: 1; overflow: hidden; }
 .bar-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-.bar-file  { font-family: var(--font-mono); font-size: 12px; color: var(--green); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-file  { font-family: var(--font-mono); font-size: 15px; color: var(--green); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .bar-close,
 .bar-back {
@@ -411,9 +412,9 @@ footer {
   border: 1px solid transparent;
   color: var(--green-dim);
   font-family: var(--font-display);
-  font-size: 9px;
+  font-size: 13px;
   letter-spacing: .08em;
-  padding: 4px 8px;
+  padding: 6px 12px;
   cursor: pointer;
   transition: color .15s, border-color .15s, background .15s;
   flex-shrink: 0;
@@ -427,9 +428,9 @@ footer {
   border: 1px solid var(--border-bright);
   color: var(--green);
   font-family: var(--font-display);
-  font-size: 8px;
+  font-size: 12px;
   letter-spacing: .14em;
-  padding: 5px 16px;
+  padding: 7px 20px;
   cursor: pointer;
   transition: all .15s;
   white-space: nowrap;
@@ -439,7 +440,7 @@ footer {
 .bar-save.dirty:hover    { background: var(--yellow); color: var(--bg); border-color: var(--yellow); box-shadow: 0 0 10px rgba(255,224,102,.5); }
 .bar-save:disabled       { opacity: .35; cursor: default; pointer-events: none; }
 
-.save-status             { font-family: var(--font-mono); font-size: 9px; letter-spacing: .06em; min-width: 60px; text-align: right; }
+.save-status             { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; min-width: 60px; text-align: right; }
 .save-status.ok          { color: var(--green); }
 .save-status.err         { color: var(--red); }
 
@@ -453,11 +454,11 @@ footer {
 .file-list::-webkit-scrollbar-track { background: transparent; }
 .file-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-.file-msg     { font-size: 11px; letter-spacing: .1em; opacity: .35; text-align: center; margin-top: 32px; }
+.file-msg     { font-size: 14px; letter-spacing: .1em; opacity: .35; text-align: center; margin-top: 32px; }
 .file-msg.err { color: var(--red); opacity: .7; }
 
 .file-group   { display: flex; flex-direction: column; gap: 3px; }
-.group-label  { font-family: var(--font-mono); font-size: 9px; letter-spacing: .12em; color: var(--green); opacity: .28; text-transform: uppercase; padding: 0 2px 6px; border-bottom: 1px solid var(--border); margin-bottom: 2px; }
+.group-label  { font-family: var(--font-mono); font-size: 12px; letter-spacing: .12em; color: var(--green); opacity: .28; text-transform: uppercase; padding: 0 2px 6px; border-bottom: 1px solid var(--border); margin-bottom: 2px; }
 
 .file-row {
   display: flex; align-items: center;
@@ -493,15 +494,15 @@ footer {
 }
 .file-row-delete:hover { background: rgba(255,59,59,.1); opacity: 1; }
 
-.ext-badge { font-family: var(--font-mono); font-size: 8px; letter-spacing: .08em; background: rgba(0,255,136,.12); color: var(--green); border: 1px solid var(--border-bright); padding: 2px 7px; min-width: 38px; text-align: center; flex-shrink: 0; opacity: .65; transition: opacity .12s; }
-.fname     { font-family: var(--font-mono); font-size: 14px; letter-spacing: .02em; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.fopen     { font-family: var(--font-display); font-size: 8px; letter-spacing: .12em; opacity: 0; transform: translateX(-8px); transition: opacity .12s, transform .12s; flex-shrink: 0; }
+.ext-badge { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; background: rgba(0,255,136,.12); color: var(--green); border: 1px solid var(--border-bright); padding: 3px 9px; min-width: 44px; text-align: center; flex-shrink: 0; opacity: .65; transition: opacity .12s; }
+.fname     { font-family: var(--font-mono); font-size: 17px; letter-spacing: .02em; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fopen     { font-family: var(--font-display); font-size: 11px; letter-spacing: .12em; opacity: 0; transform: translateX(-8px); transition: opacity .12s, transform .12s; flex-shrink: 0; }
 
 /* CodeMirror wrap */
 .cm-wrap { flex: 1; overflow: hidden; min-height: 0; }
-.cm-wrap .CodeMirror { height: 100%; font-family: var(--font-mono); font-size: 13px; line-height: 1.65; }
+.cm-wrap .CodeMirror { height: 100%; font-family: var(--font-mono); font-size: 16px; line-height: 1.65; }
 
-.editor-hint { padding: 5px 16px; font-size: 8px; letter-spacing: .1em; color: var(--green); opacity: .2; background: var(--bg-dark); border-top: 1px solid var(--border); flex-shrink: 0; }
+.editor-hint { padding: 5px 16px; font-size: 11px; letter-spacing: .1em; color: var(--green); opacity: .2; background: var(--bg-dark); border-top: 1px solid var(--border); flex-shrink: 0; }
 
 /* New file row */
 .bar-new {
@@ -509,9 +510,9 @@ footer {
   border: 1px solid var(--border-bright);
   color: var(--green);
   font-family: var(--font-display);
-  font-size: 8px;
+  font-size: 12px;
   letter-spacing: .12em;
-  padding: 4px 10px;
+  padding: 6px 14px;
   cursor: pointer;
   transition: all .15s;
   white-space: nowrap;
@@ -551,4 +552,115 @@ footer {
   color: var(--red);
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   TEST CONFIG MODAL
+══════════════════════════════════════════════════════════════════════════════ */
+.test-shell {
+  width: min(460px, 92vw);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-bright);
+  box-shadow: 0 0 80px rgba(0,255,136,.07);
+  overflow: hidden;
+  animation: shellIn .15s ease both;
+  zoom: 1.5;
+}
+
+/* Larger title and close button than the shared .bar-title / .bar-close defaults */
+.test-shell .bar-title {
+  font-size: 13px;
+  letter-spacing: .2em;
+  opacity: 1;
+}
+.test-shell .bar-close {
+  font-size: 16px;
+  padding: 4px 12px;
+}
+
+.test-form {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.test-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--green);
+  opacity: .75;
+}
+
+.test-form label.checkbox-label {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  text-transform: none;
+  font-size: 12px;
+  letter-spacing: .04em;
+  opacity: .85;
+}
+
+.test-form input[type="text"],
+.test-form input[type="number"] {
+  background: #0a160d;
+  border: 1px solid var(--border-bright);
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 7px 10px;
+  outline: none;
+  width: 100%;
+  transition: border-color .15s, box-shadow .15s;
+}
+.test-form input[type="text"]:focus,
+.test-form input[type="number"]:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 8px rgba(0,255,136,.15);
+}
+.test-form input[type="text"]::placeholder { color: rgba(0,255,136,.25); }
+
+.test-form input[type="checkbox"] {
+  accent-color: var(--green);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.test-form .hint {
+  font-size: 9px;
+  letter-spacing: .06em;
+  opacity: .4;
+  text-transform: none;
+}
+
+.failure-criteria {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  margin-top: 4px;
+  font-size: 10px;
+  letter-spacing: .06em;
+  line-height: 1.8;
+  opacity: .6;
+}
+
+.failure-criteria strong {
+  display: block;
+  font-size: 9px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.failure-criteria ul { padding-left: 16px; }
+
+#start-test-btn {
+  width: 100%;
+  margin-top: 4px;
 }

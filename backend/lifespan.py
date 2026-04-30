@@ -85,7 +85,7 @@ async def lifespan(app: FastAPI):
     t1.start()
     t2.start()
 
-    print("\n  vis-ssh-on started — http://0.0.0.0:8000\n")
+    print("\n  vis-ssh-on started — http://100.125.67.124:8000\n")
 
     try:
         yield

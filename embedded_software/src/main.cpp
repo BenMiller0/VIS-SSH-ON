@@ -1,17 +1,20 @@
-#include <Arduino.h>
-constexpr int LED_PIN = 13;
+#include "soc/gpio_struct.h"
+#include "esp_rom_sys.h"
 
-void setup() {
-    delay(2000); // <---- DO NOT DELETE
-    Serial.begin(115200);
-    pinMode(LED_PIN, OUTPUT);
-}
+#define LED_PIN 13
 
-void loop() {
-    // uncomment the code below and upload it to the ESP 32 to make it blink, remotely!
-    // Build and compile with: pio run -t upload
-	digitalWrite(LED_PIN, HIGH);  
-    delay(900);
-    digitalWrite(LED_PIN, LOW);
-    delay(900);
+// Bare metal C code to blink LED
+extern "C" void app_main(void) {
+    esp_rom_delay_us(2000000); // <---- DO NOT DELETE
+    
+    // Un-comment code to remotely make LED blink!
+    /*
+    GPIO.enable_w1ts = (1 << LED_PIN);
+    while (1) {
+        GPIO.out_w1ts = (1 << LED_PIN);
+        esp_rom_delay_us(900000);
+        GPIO.out_w1tc = (1 << LED_PIN);
+        esp_rom_delay_us(900000);
+    }
+    */
 }

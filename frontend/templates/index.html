@@ -31,7 +31,8 @@
             <canvas id="heatmap" width="8" height="8"></canvas>
         </div>
         <div class="controls">
-            <button onclick="sendCommand(1)">Run Test</button>
+            <button id="run-test-btn" class="action-btn">▶ RUN TEST</button>
+            <button id="stop-btn" class="action-btn" style="display:none">■ STOP TEST</button>
         </div>
     </main>
 
@@ -99,6 +100,54 @@
                 <div class="editor-hint">Ctrl+S · save &nbsp;|&nbsp; Esc · close</div>
             </div>
 
+        </div>
+    </div>
+
+    <!-- ── Test config modal ──────────────────────────────────────────────── -->
+    <div id="test-modal" style="display:none; position:fixed; inset:0; z-index:9999;
+                background:rgba(0,0,0,.9); align-items:center; justify-content:center;">
+        <div class="test-shell">
+            <div class="modal-bar">
+                <span class="bar-title">CONFIGURE TEST</span>
+                <button id="close-test-modal" class="bar-close">✕</button>
+            </div>
+            <div class="test-form">
+
+                <label>Test Name
+                    <input id="test-name" type="text" placeholder="e.g. Thermal Stress Run" />
+                </label>
+
+                <label class="checkbox-label">
+                    <input id="enable-thermal" type="checkbox" checked />
+                    Enable Thermal Check
+                </label>
+
+                <div id="thermal-options">
+                    <label>Max Temperature (°C)
+                        <input id="max-temp" type="number" value="75" min="0" max="200" />
+                    </label>
+                    <label class="checkbox-label">
+                        <input id="require-pixel-change" type="checkbox" checked />
+                        Require Pixel Change
+                    </label>
+                </div>
+
+                <label>Duration (seconds)
+                    <input id="test-duration" type="number" value="0" min="0" />
+                    <span class="hint">0 = run until manually stopped</span>
+                </label>
+
+                <div class="failure-criteria">
+                    <strong>When does a test fail?</strong>
+                    <ul>
+                        <li>Temperature exceeds the Max Temperature threshold on any sample</li>
+                        <li>Pixel change is required but the thermal image does not change between samples</li>
+                    </ul>
+                </div>
+
+                <button id="start-test-btn" class="action-btn">▶ START TEST</button>
+
+            </div>
         </div>
     </div>
 

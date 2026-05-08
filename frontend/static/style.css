@@ -664,3 +664,219 @@ footer {
   width: 100%;
   margin-top: 4px;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CONTROLS ROW  (test buttons + PTZ side by side)
+══════════════════════════════════════════════════════════════════════════════ */
+
+.controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: min(860px, 100%);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CAMERA PTZ CONTROL  (append to style.css)
+══════════════════════════════════════════════════════════════════════════════ */
+
+.cam-ctrl {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-bright);
+  box-shadow: 0 0 18px var(--green-glow);
+  animation: fadeIn 0.5s ease;
+  flex-shrink: 0;
+}
+
+.cam-ctrl-label {
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  color: var(--green);
+  opacity: 0.45;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 6px 12px 5px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cam-ctrl-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+}
+
+/* ── D-pad grid ── */
+.cam-dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 30px);
+  grid-template-rows: repeat(3, 30px);
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.dpad-btn {
+  background: transparent;
+  border: 1px solid var(--border-bright);
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s, box-shadow 0.1s, color 0.1s;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.dpad-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--green);
+  transform: scale(0);
+  transition: transform 0.08s ease;
+  z-index: 0;
+}
+
+.dpad-btn:hover { border-color: var(--green); box-shadow: 0 0 8px var(--green-dim); }
+.dpad-btn:hover::after, .dpad-btn.active::after { transform: scale(1); }
+.dpad-btn:hover, .dpad-btn.active { color: var(--bg); }
+
+.dpad-up::before    { content: '▲'; position: relative; z-index: 1; }
+.dpad-down::before  { content: '▼'; position: relative; z-index: 1; }
+.dpad-left::before  { content: '◀'; position: relative; z-index: 1; }
+.dpad-right::before { content: '▶'; position: relative; z-index: 1; }
+.dpad-center::before { content: '⊹'; position: relative; z-index: 1; font-size: 15px; opacity: 0.6; }
+.dpad-center:hover::before, .dpad-center.active::before { opacity: 1; }
+
+.dpad-up     { grid-column: 2; grid-row: 1; }
+.dpad-left   { grid-column: 1; grid-row: 2; }
+.dpad-center { grid-column: 2; grid-row: 2; }
+.dpad-right  { grid-column: 3; grid-row: 2; }
+.dpad-down   { grid-column: 2; grid-row: 3; }
+
+/* ── Side column: zoom + speed ── */
+.cam-side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-left: 1px solid var(--border);
+  padding-left: 12px;
+}
+
+.cam-zoom {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.zoom-btn {
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid var(--border-bright);
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s, color 0.1s, box-shadow 0.1s;
+  user-select: none;
+  -webkit-user-select: none;
+  flex-shrink: 0;
+}
+
+.zoom-btn:hover, .zoom-btn.active {
+  background: var(--green);
+  color: var(--bg);
+  box-shadow: 0 0 8px var(--green-dim);
+}
+
+.zoom-label {
+  font-family: var(--font-display);
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  color: var(--green);
+  opacity: 0.35;
+  flex-shrink: 0;
+}
+
+.cam-speed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.speed-label {
+  font-family: var(--font-display);
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  color: var(--green);
+  opacity: 0.35;
+  flex-shrink: 0;
+}
+
+.speed-val {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--green);
+  opacity: 0.7;
+  min-width: 10px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.speed-slider {
+  width: 70px;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 2px;
+  background: var(--border-bright);
+  outline: none;
+  cursor: pointer;
+}
+
+.speed-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  background: var(--green);
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 0 6px var(--green-dim);
+}
+
+.speed-slider::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  background: var(--green);
+  border: none;
+  cursor: pointer;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .controls-row { flex-direction: column; align-items: flex-start; }
+
+  .cam-dpad {
+    grid-template-columns: repeat(3, 26px);
+    grid-template-rows: repeat(3, 26px);
+    gap: 2px;
+  }
+
+  .dpad-btn { font-size: 11px; }
+  .zoom-btn { width: 24px; height: 24px; font-size: 15px; }
+  .speed-slider { width: 52px; }
+}

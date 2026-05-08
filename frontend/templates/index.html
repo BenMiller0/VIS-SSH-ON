@@ -29,10 +29,38 @@
         <div class="viewport">
             <img id="image" height="400" />
             <canvas id="heatmap" width="8" height="8"></canvas>
+
         </div>
-        <div class="controls">
-            <button id="run-test-btn" class="action-btn">▶ RUN TEST</button>
-            <button id="stop-btn" class="action-btn" style="display:none">■ STOP TEST</button>
+
+        <!-- ── Controls ─────────────────────────────────────────── -->
+        <div class="controls-row">
+            <div class="controls">
+                <button id="run-test-btn" class="action-btn">▶ RUN TEST</button>
+                <button id="stop-btn" class="action-btn" style="display:none">■ STOP TEST</button>
+            </div>
+
+            <!-- Camera PTZ Control -->
+            <div class="cam-ctrl" id="cam-ctrl">
+                <div class="cam-ctrl-label">⬡ CAM CONTROLLER</div>
+
+                <div class="cam-ctrl-body">
+                    <div class="cam-dpad">
+                        <button class="dpad-btn dpad-up"     data-dir="up"    aria-label="Tilt Up"></button>
+                        <button class="dpad-btn dpad-left"   data-dir="left"  aria-label="Pan Left"></button>
+                        <button class="dpad-btn dpad-center" data-dir="home"  aria-label="Home / Center" title="HOME"></button>
+                        <button class="dpad-btn dpad-right"  data-dir="right" aria-label="Pan Right"></button>
+                        <button class="dpad-btn dpad-down"   data-dir="down"  aria-label="Tilt Down"></button>
+                    </div>
+
+                    <div class="cam-side">
+                        <div class="cam-zoom">
+                            <button class="zoom-btn" data-dir="zoom-in"  aria-label="Zoom In">+</button>
+                            <span class="zoom-label">ZOOM</span>
+                            <button class="zoom-btn" data-dir="zoom-out" aria-label="Zoom Out">−</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -160,6 +188,7 @@
     <script src="/static/script.js"></script>
     <script src="/static/editor.js"></script>
     <script src="/static/flash.js"></script>
+    <script src="/static/ptz.js"></script>
 </body>
 
 </html>

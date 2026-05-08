@@ -10,6 +10,10 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
+# Camera zoom constants - available in both mock and real implementations
+ZOOM_MIN = 1.0
+ZOOM_MAX = 8.0
+
 
 class CameraInterface(ABC):
 
@@ -28,3 +32,6 @@ class CameraInterface(ABC):
     @abstractmethod
     def close(self) -> None:
         """Release all hardware resources."""
+
+    def set_zoom(self, zoom: float) -> None:
+        pass

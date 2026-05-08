@@ -38,8 +38,18 @@ The RGB camera falls back to your system webcam (OpenCV) and thermal data is ran
 ## UI features
 
 ### Live feeds
-- **RGB camera** — streamed as JPEG over WebSocket (`/ws`)
+- **RGB camera** — streamed as JPEG over WebSocket (`/ws`) with PTZ (Pan-Tilt-Zoom) controls
 - **Thermal heatmap** — 8×8 AMG88xx pixel grid overlaid on the viewport, updated ~10 Hz via `/ws/thermal`
+
+### PTZ Camera Control
+- **Digital zoom** — 1× to 8× zoom using Picamera2 ScalerCrop (real hardware) or simulated (mock mode)
+- **Pan/Tilt controls** — D-pad interface ready for servo integration (currently placeholder)
+- **Multiple input methods**:
+  - On-screen D-pad and zoom buttons
+  - Mouse wheel zoom on viewport
+  - Keyboard shortcuts (Arrow keys/WASD for pan, +/- for zoom, H for home)
+  - Touch support for mobile devices
+- **Visual feedback** — Zoom level badge displayed when zoomed in
 
 ### Flash firmware (`⬡ FLASH CODE`)
 Triggers a PlatformIO build + upload and streams the full `pio run -t upload` output live in a modal. Shows `__OK__` or `__FAIL__` on completion.
@@ -78,6 +88,7 @@ pio device monitor -b 115200
 | `WS`         | `/ws`                    | JPEG camera stream        |
 | `WS`         | `/ws/thermal`            | Thermal pixel data (JSON) |
 | `WS`         | `/ws/test`               | Live test event stream    |
+| `POST`       | `/api/ptz`               | Camera PTZ control         |
 | `POST`       | `/api/flash`             | Build + upload (SSE)      |
 | `GET/POST`   | `/api/files/{path}`      | Read / write files        |
 | `GET`        | `/api/files`             | List all files            |
@@ -103,6 +114,7 @@ pio device monitor -b 115200
 │   │   ├── script.js              # WS connections, camera/thermal/test rendering
 │   │   ├── editor.js              # In-browser file editor
 │   │   ├── flash.js               # Flash modal + SSE handling
+│   │   ├── ptz.js                 # PTZ camera control UI and interactions
 │   │   └── style.css
 │   └── templates/
 │       └── index.html
@@ -110,6 +122,7 @@ pio device monitor -b 115200
     ├── lifespan.py                # Startup/shutdown, shared camera state
     ├── schemas.py                 # Pydantic models
     ├── api/
+    │   ├── routes_camera.py       # PTZ camera control API
     │   ├── routes_configs.py      # Test config CRUD
     │   ├── routes_files.py        # File browser API
     │   ├── routes_flash.py        # PIO flash route
@@ -119,7 +132,8 @@ pio device monitor -b 115200
     │   └── tests.db               # Created automatically on first run
     ├── hardware/
     │   ├── provider.py            # Selects real vs mock hardware
-    │   ├── camera.py              # Picamera2 implementation
+    │   ├── interface_camera.py    # Abstract camera interface with zoom support
+    │   ├── camera.py              # Picamera2 implementation with zoom
     │   ├── camera_thermal.py      # AMG88xx implementation
     │   ├── mock_camera.py         # OpenCV webcam fallback
     │   └── mock_camera_thermal.py # Random data fallback

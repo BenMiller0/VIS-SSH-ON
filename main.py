@@ -10,6 +10,7 @@ from backend.api.routes_flash import router as flash_router
 from backend.websockets.ws_camera import router as ws_camera_router
 from backend.websockets.ws_thermal import router as ws_thermal_router
 from backend.websockets.ws_test import router as ws_test_router
+from backend.api.api_ptz import router as ptz_router
 
 app = FastAPI(lifespan=lifespan)
 
@@ -26,6 +27,7 @@ app.include_router(flash_router)
 app.include_router(ws_camera_router)
 app.include_router(ws_thermal_router)
 app.include_router(ws_test_router)
+app.include_router(ptz_router)
 
 # Page route lives here since it needs templates
 from fastapi import Request

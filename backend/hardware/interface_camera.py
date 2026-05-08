@@ -28,3 +28,6 @@ class CameraInterface(ABC):
     @abstractmethod
     def close(self) -> None:
         """Release all hardware resources."""
+
+    def set_zoom(self, zoom: float) -> None:
+        pass

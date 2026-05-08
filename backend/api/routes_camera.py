@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 import backend.lifespan as state
 from backend.hardware.provider import IS_PI
-from backend.hardware.camera import ZOOM_MIN, ZOOM_MAX
+from backend.hardware.interface_camera import ZOOM_MIN, ZOOM_MAX
 
 router = APIRouter()
 

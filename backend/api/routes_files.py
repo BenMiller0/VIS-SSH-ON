@@ -20,7 +20,8 @@ from pydantic import BaseModel
 router = APIRouter(prefix="/api/files", tags=["files"])
 
 EMBEDDED_SOFTWARE_DIR = "embedded_software"
-_EXCLUDED_DIRS = {".pio", ".git", ".venv", "__pycache__", "node_modules", ".idea", ".vscode"}
+_EXCLUDED_DIRS  = {".pio", ".git", ".venv", "__pycache__", "node_modules", ".idea", ".vscode", "vis_ssh_on"}
+_EXCLUDED_FILES = {"sdkconfig.adafruit_feather_esp32s3"}
 
 
 def _safe_path(file_path: str) -> str | None:
@@ -47,6 +48,8 @@ def list_files():
             if d not in _EXCLUDED_DIRS and not d.startswith(".")
         )
         for filename in sorted(filenames):
+            if filename in _EXCLUDED_FILES:
+                continue
             rel = os.path.relpath(os.path.join(root, filename), base)
             files.append(rel.replace(os.sep, "/"))
     return {"files": files}

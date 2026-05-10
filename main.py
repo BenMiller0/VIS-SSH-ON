@@ -11,6 +11,7 @@ from backend.websockets.ws_camera import router as ws_camera_router
 from backend.websockets.ws_thermal import router as ws_thermal_router
 from backend.websockets.ws_test import router as ws_test_router
 from backend.api.routes_camera import router as routes_camera
+from backend.websockets.ws_serial import router as ws_serial_router
 
 app = FastAPI(lifespan=lifespan)
 
@@ -28,6 +29,7 @@ app.include_router(ws_camera_router)
 app.include_router(ws_thermal_router)
 app.include_router(ws_test_router)
 app.include_router(routes_camera)
+app.include_router(ws_serial_router)
 
 # Page route lives here since it needs templates
 from fastapi import Request

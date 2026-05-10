@@ -1424,3 +1424,145 @@ main .run-layout .viewport {
   .zoom-btn { width: 24px; height: 24px; font-size: 15px; }
   .speed-slider { width: 52px; }
 }
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   SERIAL MONITOR
+══════════════════════════════════════════════════════════════════════════════ */
+
+.serial-shell {
+  width: min(900px, 92vw);
+  height: min(580px, 84vh);
+  background: #0a0a0a;
+  border: 1px solid var(--border-bright);
+  box-shadow: 0 0 60px rgba(0, 255, 136, .08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: shellIn .15s ease both;
+}
+
+.serial-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  height: 48px;
+  min-height: 48px;
+  background: var(--bg-dark);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 10px;
+}
+
+.serial-bar-title {
+  font-size: 13px;
+  letter-spacing: .2em;
+  color: var(--green);
+  opacity: .55;
+  flex-shrink: 0;
+}
+
+.serial-bar-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.serial-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: .14em;
+  color: var(--green);
+  opacity: .5;
+  white-space: nowrap;
+}
+
+.serial-label-check {
+  cursor: pointer;
+  user-select: none;
+}
+
+.serial-label-check input[type="checkbox"] {
+  accent-color: var(--green);
+  width: 12px;
+  height: 12px;
+  cursor: pointer;
+}
+
+.serial-select {
+  background: var(--bg-dark);
+  border: 1px solid var(--border-bright);
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 6px;
+  outline: none;
+  cursor: pointer;
+}
+
+.serial-select:focus { border-color: var(--green); }
+
+.serial-ctrl-btn {
+  background: transparent;
+  border: 1px solid var(--border-bright);
+  color: var(--green);
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: .1em;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.serial-ctrl-btn:hover { background: var(--green-faint); border-color: var(--green); }
+
+.serial-ctrl-btn.stop { border-color: rgba(255,59,59,.4); color: var(--red); }
+.serial-ctrl-btn.stop:hover { background: rgba(255,59,59,.08); border-color: var(--red); }
+
+.serial-output {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px 16px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--green-dim);
+  display: flex;
+  flex-direction: column;
+}
+
+.serial-output::-webkit-scrollbar       { width: 4px; }
+.serial-output::-webkit-scrollbar-track { background: transparent; }
+.serial-output::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.so-line      { white-space: pre-wrap; word-break: break-all; }
+.so-line.err  { color: var(--red); }
+.so-line.warn { color: var(--yellow); }
+
+.so-ts {
+  color: rgba(0,255,136,.3);
+  font-size: 12px;
+  user-select: none;
+}
+
+.serial-footer {
+  display: flex;
+  align-items: center;
+  padding: 6px 16px;
+  height: 34px;
+  min-height: 34px;
+  background: var(--bg-dark);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.serial-status      { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; opacity: .5; }
+.serial-status.ok   { color: var(--green); opacity: 1; }
+.serial-status.err  { color: var(--red);   opacity: 1; }

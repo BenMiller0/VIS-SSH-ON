@@ -18,6 +18,7 @@
         <h1>VIS-SSH-ON</h1>
         <div class="header-actions">
             <button id="flash-btn" class="action-btn" data-state="idle">⬡ FLASH CODE</button>
+            <button id="serial-btn" class="action-btn">⎃ SERIAL</button>
             <button id="editor-btn" class="action-btn">✎ EDIT CODE</button>
         </div>
     </header>
@@ -29,7 +30,6 @@
         <div class="viewport">
             <img id="image" height="400" />
             <canvas id="heatmap" width="8" height="8"></canvas>
-
         </div>
 
         <!-- ── Controls ─────────────────────────────────────────── -->
@@ -82,6 +82,41 @@
             <div id="flash-output" class="flash-output"></div>
             <div class="flash-footer">
                 <span id="flash-status" class="flash-status"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Serial monitor modal ────────────────────────────────────────────── -->
+    <div id="serial-modal" style="display:none; position:fixed; inset:0; z-index:9999;
+                background:rgba(0,0,0,.9); align-items:center; justify-content:center;">
+        <div class="serial-shell">
+            <div class="serial-bar">
+                <span class="serial-bar-title">SERIAL MONITOR</span>
+                <div class="serial-bar-controls">
+                    <label class="serial-label">BAUD
+                        <select id="serial-baud" class="serial-select">
+                            <option value="9600">9600</option>
+                            <option value="19200">19200</option>
+                            <option value="38400">38400</option>
+                            <option value="57600">57600</option>
+                            <option value="115200" selected>115200</option>
+                            <option value="230400">230400</option>
+                            <option value="460800">460800</option>
+                            <option value="921600">921600</option>
+                        </select>
+                    </label>
+                    <label class="serial-label serial-label-check">
+                        <input id="serial-timestamps" type="checkbox" />
+                        Time Stamps
+                    </label>
+                    <button id="serial-clear" class="serial-ctrl-btn">CLR</button>
+                    <button id="serial-stop"  class="serial-ctrl-btn stop" style="display:none">■ STOP</button>
+                    <button id="serial-close" class="bar-close">✕</button>
+                </div>
+            </div>
+            <div id="serial-output" class="serial-output"></div>
+            <div class="serial-footer">
+                <span id="serial-status" class="serial-status"></span>
             </div>
         </div>
     </div>
@@ -189,6 +224,7 @@
     <script src="/static/editor.js"></script>
     <script src="/static/flash.js"></script>
     <script src="/static/ptz.js"></script>
+    <script src="/static/serial.js"></script>
 </body>
 
 </html>

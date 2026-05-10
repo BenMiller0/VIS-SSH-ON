@@ -40,3 +40,27 @@
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (test_run_id) REFERENCES test_runs(id)
     );
+
+    -- Test Timeline Events
+
+    CREATE TABLE test_run_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        test_run_id INTEGER,
+        event_type TEXT NOT NULL,
+        message TEXT,
+        payload TEXT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (test_run_id) REFERENCES test_runs(id)
+    );
+
+    -- Replay / Report Artifacts
+
+    CREATE TABLE test_run_artifacts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        test_run_id INTEGER,
+        artifact_type TEXT NOT NULL,
+        path TEXT NOT NULL,
+        metadata TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (test_run_id) REFERENCES test_runs(id)
+    );

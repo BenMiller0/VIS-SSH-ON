@@ -39,4 +39,7 @@ def home(request: Request):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
+    try:
+        uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
+    except KeyboardInterrupt:
+        print("\nVIS-SSH-ON shutdown requested.")

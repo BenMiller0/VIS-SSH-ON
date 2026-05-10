@@ -15,69 +15,236 @@
 
 <body>
     <header>
-        <h1>VIS-SSH-ON</h1>
+        <div class="brand-block">
+            <h1>VIS-SSH-ON</h1>
+            <nav class="primary-nav" aria-label="Primary navigation">
+                <button class="nav-tab active" data-view-target="monitor-view">Monitor</button>
+                <button class="nav-tab" data-view-target="configs-view">Tests</button>
+                <button class="nav-tab" data-view-target="run-view">Run</button>
+                <button class="nav-tab" data-view-target="reports-view">Reports</button>
+                <button class="nav-tab" data-view-target="replay-view">Replay</button>
+            </nav>
+        </div>
         <div class="header-actions">
-            <button id="flash-btn" class="action-btn" data-state="idle">⬡ FLASH CODE</button>
-            <button id="editor-btn" class="action-btn">✎ EDIT CODE</button>
+            <button id="flash-btn" class="action-btn" data-state="idle">FLASH CODE</button>
+            <button id="editor-btn" class="action-btn">EDIT CODE</button>
         </div>
     </header>
 
     <main>
-        <div class="status-bar">
-            Status: <span id="status" class="disconnected">Disconnected</span>
-        </div>
-        <div class="viewport">
-            <img id="image" height="400" />
-            <canvas id="heatmap" width="8" height="8"></canvas>
-
-        </div>
-
-        <!-- ── Controls ─────────────────────────────────────────── -->
-        <div class="controls-row">
-            <div class="controls">
-                <button id="run-test-btn" class="action-btn">▶ RUN TEST</button>
-                <button id="stop-btn" class="action-btn" style="display:none">■ STOP TEST</button>
+        <section id="monitor-view" class="app-view active">
+            <div class="status-bar">
+                Status: <span id="status" class="disconnected">Disconnected</span>
             </div>
 
-            <!-- Camera PTZ Control -->
-            <div class="cam-ctrl" id="cam-ctrl">
-                <div class="cam-ctrl-label">⬡ CAM CONTROLLER</div>
+            <div class="monitor-layout">
+                <div class="viewport">
+                    <img id="image" data-camera-feed height="400" alt="Live camera feed" />
+                    <canvas id="heatmap" data-heatmap width="8" height="8"></canvas>
+                    <div id="monitor-overlay" class="vision-overlay" hidden></div>
+                </div>
 
-                <div class="cam-ctrl-body">
-                    <div class="cam-dpad">
-                        <button class="dpad-btn dpad-up"     data-dir="up"    aria-label="Tilt Up"></button>
-                        <button class="dpad-btn dpad-left"   data-dir="left"  aria-label="Pan Left"></button>
-                        <button class="dpad-btn dpad-center" data-dir="home"  aria-label="Home / Center" title="HOME"></button>
-                        <button class="dpad-btn dpad-right"  data-dir="right" aria-label="Pan Right"></button>
-                        <button class="dpad-btn dpad-down"   data-dir="down"  aria-label="Tilt Down"></button>
+                <aside class="side-panel">
+                    <div class="panel-heading">Current Run</div>
+                    <div class="status-stack">
+                        <span class="label">Selected Test</span>
+                        <strong id="monitor-selected-test">No test selected</strong>
                     </div>
-
-                    <div class="cam-side">
-                        <div class="cam-zoom">
-                            <button class="zoom-btn" data-dir="zoom-in"  aria-label="Zoom In">+</button>
-                            <span class="zoom-label">ZOOM</span>
-                            <button class="zoom-btn" data-dir="zoom-out" aria-label="Zoom Out">−</button>
+                    <div class="status-stack">
+                        <span class="label">Run State</span>
+                        <strong data-test-status>IDLE</strong>
+                    </div>
+                    <div id="monitor-metrics" data-test-metrics class="metrics-block"></div>
+                    <div class="panel-actions">
+                        <button class="action-btn" data-view-target="configs-view">TEST CONFIGS</button>
+                        <button class="action-btn" data-view-target="run-view">RUN WORKSPACE</button>
+                    </div>
+                    <div class="cam-ctrl" id="cam-ctrl">
+                        <div class="cam-ctrl-label">CAM CONTROLLER</div>
+                        <div class="cam-ctrl-body">
+                            <div class="cam-dpad">
+                                <button class="dpad-btn dpad-up" data-dir="up" aria-label="Tilt Up"></button>
+                                <button class="dpad-btn dpad-left" data-dir="left" aria-label="Pan Left"></button>
+                                <button class="dpad-btn dpad-center" data-dir="home" aria-label="Home / Center" title="HOME"></button>
+                                <button class="dpad-btn dpad-right" data-dir="right" aria-label="Pan Right"></button>
+                                <button class="dpad-btn dpad-down" data-dir="down" aria-label="Tilt Down"></button>
+                            </div>
+                            <div class="cam-side">
+                                <div class="cam-zoom">
+                                    <button class="zoom-btn" data-dir="zoom-in" aria-label="Zoom In">+</button>
+                                    <span class="zoom-label">ZOOM</span>
+                                    <button class="zoom-btn" data-dir="zoom-out" aria-label="Zoom Out">-</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                </aside>
+            </div>
+        </section>
+
+        <section id="configs-view" class="app-view">
+            <div class="section-header">
+                <div>
+                    <span class="section-kicker">Test Library</span>
+                    <h2>Configured Tests</h2>
+                </div>
+                <div class="section-actions">
+                    <button id="new-arm-config-btn" class="action-btn">+ ARM TEST</button>
+                    <button id="refresh-configs-btn" class="action-btn">REFRESH</button>
                 </div>
             </div>
-        </div>
+
+            <div class="config-layout">
+                <div class="config-list-shell">
+                    <div id="config-list" class="config-list">
+                        <div class="empty-state">Loading configs...</div>
+                    </div>
+                </div>
+
+                <form id="config-form" class="config-editor">
+                    <div class="panel-heading">Config Details</div>
+                    <label>Test Name
+                        <input id="config-name" type="text" value="Robotic Arm Direction Test" />
+                    </label>
+                    <label>Description
+                        <textarea id="config-description" rows="3">Detects when the arm rotates opposite the expected direction.</textarea>
+                    </label>
+                    <label>Test Type
+                        <select id="config-type">
+                            <option value="vision">Computer Vision</option>
+                            <option value="thermal">Thermal</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </label>
+                    <div class="form-grid">
+                        <label>Expected Direction
+                            <select id="config-expected-direction">
+                                <option value="counterclockwise">Counterclockwise</option>
+                                <option value="clockwise">Clockwise</option>
+                            </select>
+                        </label>
+                        <label>Duration (seconds)
+                            <input id="config-duration" type="number" min="0" value="10" />
+                        </label>
+                        <label>Pre-Failure Buffer
+                            <input id="config-pre-buffer" type="number" min="1" value="5" />
+                        </label>
+                        <label>Confidence Threshold
+                            <input id="config-confidence" type="number" min="0" max="1" step="0.05" value="0.75" />
+                        </label>
+                    </div>
+                    <label class="checkbox-label">
+                        <input id="config-enable-thermal" type="checkbox" checked />
+                        Include thermal stream
+                    </label>
+                    <div class="form-actions">
+                        <button type="submit" class="action-btn">SAVE CONFIG</button>
+                        <button type="button" id="run-selected-config-btn" class="action-btn">RUN SELECTED</button>
+                    </div>
+                    <div id="config-save-status" class="inline-status"></div>
+                </form>
+            </div>
+        </section>
+
+        <section id="run-view" class="app-view">
+            <div class="section-header">
+                <div>
+                    <span class="section-kicker">Run Workspace</span>
+                    <h2 id="run-title">No Test Selected</h2>
+                </div>
+                <div class="section-actions">
+                    <button class="action-btn" data-view-target="configs-view">CHANGE TEST</button>
+                </div>
+            </div>
+
+            <div class="run-layout">
+                <div class="viewport">
+                    <img data-camera-feed height="400" alt="Run camera feed" />
+                    <canvas data-heatmap width="8" height="8"></canvas>
+                    <div id="run-overlay" class="vision-overlay" hidden></div>
+                </div>
+
+                <aside class="side-panel">
+                    <div class="panel-heading">Execution</div>
+                    <div class="status-stack">
+                        <span class="label">Expected</span>
+                        <strong id="run-expected-direction">-</strong>
+                    </div>
+                    <label>Duration (seconds)
+                        <input id="run-duration" type="number" min="0" value="10" />
+                    </label>
+                    <div class="run-controls">
+                        <button id="start-run-btn" class="action-btn">START</button>
+                        <button id="stop-btn" class="action-btn" style="display:none">STOP</button>
+                    </div>
+                    <div class="status-stack">
+                        <span class="label">Status</span>
+                        <strong data-test-status>IDLE</strong>
+                    </div>
+                    <div id="run-metrics" data-test-metrics class="metrics-block"></div>
+                </aside>
+            </div>
+        </section>
+
+        <section id="reports-view" class="app-view">
+            <div class="section-header">
+                <div>
+                    <span class="section-kicker">Run History</span>
+                    <h2>Reports</h2>
+                </div>
+                <button id="refresh-reports-btn" class="action-btn">REFRESH</button>
+            </div>
+            <div id="reports-list" class="reports-list">
+                <div class="empty-state">Loading reports...</div>
+            </div>
+        </section>
+
+        <section id="replay-view" class="app-view">
+            <div class="section-header">
+                <div>
+                    <span class="section-kicker">Failure Review</span>
+                    <h2 id="replay-title">Replay</h2>
+                </div>
+                <button class="action-btn" data-view-target="reports-view">REPORTS</button>
+            </div>
+
+            <div class="replay-layout">
+                <div class="replay-player">
+                    <div id="replay-frame" class="replay-frame">
+                        <span>No replay selected</span>
+                    </div>
+                    <input id="replay-scrubber" class="replay-scrubber" type="range" min="0" max="100" value="0" disabled />
+                    <div class="replay-controls">
+                        <button id="replay-play-btn" class="action-btn" disabled>PLAY</button>
+                        <button id="replay-pause-btn" class="action-btn" disabled>PAUSE</button>
+                    </div>
+                </div>
+
+                <aside class="side-panel">
+                    <div class="panel-heading">Failure Notes</div>
+                    <div id="replay-notes" class="metrics-block">Select a failed report to inspect.</div>
+                    <div class="timeline-shell">
+                        <div class="panel-heading">Timeline</div>
+                        <div id="replay-timeline" class="timeline-list"></div>
+                    </div>
+                </aside>
+            </div>
+        </section>
     </main>
 
     <footer>
         <div class="test-panel">
-            <div id="test-status">IDLE</div>
-            <div id="test-metrics"></div>
+            <div id="test-status" data-test-status>IDLE</div>
+            <div id="test-metrics" data-test-metrics></div>
         </div>
     </footer>
 
-    <!-- ── Flash output modal ──────────────────────────────────────────────── -->
     <div id="flash-modal" style="display:none; position:fixed; inset:0; z-index:9999;
                 background:rgba(0,0,0,.9); align-items:center; justify-content:center;">
         <div class="flash-shell">
             <div class="flash-bar">
                 <span class="flash-bar-title">PIO UPLOAD OUTPUT</span>
-                <button id="flash-close" class="bar-close">✕</button>
+                <button id="flash-close" class="bar-close">x</button>
             </div>
             <div id="flash-output" class="flash-output"></div>
             <div class="flash-footer">
@@ -86,22 +253,20 @@
         </div>
     </div>
 
-    <!-- ── Editor modal ────────────────────────────────────────────────────── -->
     <div id="editor-modal" style="display:none; position:fixed; inset:0; z-index:9999;
                 background:rgba(0,0,0,0.88); align-items:center; justify-content:center;">
         <div class="editor-shell">
 
-            <!-- Screen A: file picker -->
             <div id="screen-picker" style="display:flex; flex-direction:column; height:100%;">
                 <div class="modal-bar">
                     <span class="bar-title">SELECT A FILE TO EDIT</span>
                     <div class="bar-right">
                         <button class="bar-new" id="toggle-new-file">+ NEW FILE</button>
-                        <button class="bar-close" id="close-picker">✕</button>
+                        <button class="bar-close" id="close-picker">x</button>
                     </div>
                 </div>
                 <div id="new-file-row" class="new-file-row" style="display:none;">
-                    <input id="new-file-input" class="new-file-input" type="text" placeholder="e.g. src/sensors.cpp"
+                    <input id="new-file-input" class="new-file-input" type="text" placeholder="src/sensors.cpp"
                         spellcheck="false" autocomplete="off" />
                     <button id="new-file-confirm" class="bar-new confirm">CREATE</button>
                     <span id="new-file-err" class="new-file-err"></span>
@@ -109,73 +274,24 @@
                 <div id="file-list" class="file-list"></div>
             </div>
 
-            <!-- Screen B: editor -->
             <div id="screen-editor" style="display:none; flex-direction:column; height:100%;">
                 <div class="modal-bar">
                     <div class="bar-left">
-                        <button class="bar-back" id="back-btn">← FILES</button>
+                        <button class="bar-back" id="back-btn">FILES</button>
                         <span class="bar-file" id="bar-filename"></span>
                     </div>
                     <div class="bar-right">
                         <span id="save-status" class="save-status"></span>
                         <button class="bar-save" id="save-btn">SAVE</button>
-                        <button class="bar-close" id="close-editor">✕</button>
+                        <button class="bar-close" id="close-editor">x</button>
                     </div>
                 </div>
                 <div class="cm-wrap">
                     <textarea id="code-editor"></textarea>
                 </div>
-                <div class="editor-hint">Ctrl+S · save &nbsp;|&nbsp; Esc · close</div>
+                <div class="editor-hint">Ctrl+S save | Esc close</div>
             </div>
 
-        </div>
-    </div>
-
-    <!-- ── Test config modal ──────────────────────────────────────────────── -->
-    <div id="test-modal" style="display:none; position:fixed; inset:0; z-index:9999;
-                background:rgba(0,0,0,.9); align-items:center; justify-content:center;">
-        <div class="test-shell">
-            <div class="modal-bar">
-                <span class="bar-title">CONFIGURE TEST</span>
-                <button id="close-test-modal" class="bar-close">✕</button>
-            </div>
-            <div class="test-form">
-
-                <label>Test Name
-                    <input id="test-name" type="text" placeholder="e.g. Thermal Stress Run" />
-                </label>
-
-                <label class="checkbox-label">
-                    <input id="enable-thermal" type="checkbox" checked />
-                    Enable Thermal Check
-                </label>
-
-                <div id="thermal-options">
-                    <label>Max Temperature (°C)
-                        <input id="max-temp" type="number" value="75" min="0" max="200" />
-                    </label>
-                    <label class="checkbox-label">
-                        <input id="require-pixel-change" type="checkbox" checked />
-                        Require Pixel Change
-                    </label>
-                </div>
-
-                <label>Duration (seconds)
-                    <input id="test-duration" type="number" value="0" min="0" />
-                    <span class="hint">0 = run until manually stopped</span>
-                </label>
-
-                <div class="failure-criteria">
-                    <strong>When does a test fail?</strong>
-                    <ul>
-                        <li>Temperature exceeds the Max Temperature threshold on any sample</li>
-                        <li>Pixel change is required but it does not</li>
-                    </ul>
-                </div>
-
-                <button id="start-test-btn" class="action-btn">▶ START TEST</button>
-
-            </div>
         </div>
     </div>
 

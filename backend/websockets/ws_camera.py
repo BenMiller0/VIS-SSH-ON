@@ -34,3 +34,5 @@ async def ws_camera(websocket: WebSocket) -> None:
                 await websocket.send_bytes(frame)
     except WebSocketDisconnect:
         pass
+    except asyncio.CancelledError:
+        pass

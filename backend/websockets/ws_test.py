@@ -54,6 +54,8 @@ async def ws_test(websocket: WebSocket) -> None:
             await asyncio.sleep(1)
     except WebSocketDisconnect:
         pass
+    except asyncio.CancelledError:
+        pass
     finally:
         if websocket in _clients:
             _clients.remove(websocket)

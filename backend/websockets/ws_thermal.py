@@ -34,3 +34,5 @@ async def ws_thermal(websocket: WebSocket) -> None:
                 await websocket.send_text(data.decode())
     except WebSocketDisconnect:
         pass
+    except asyncio.CancelledError:
+        pass

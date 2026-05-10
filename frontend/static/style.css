@@ -665,6 +665,550 @@ footer {
   margin-top: 4px;
 }
 
+/* ==========================================================================
+   MULTI-VIEW TEST WORKSPACE
+   ========================================================================== */
+
+header {
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.brand-block {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  min-width: 0;
+}
+
+.primary-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.nav-tab {
+  background: transparent;
+  border: 1px solid transparent;
+  color: rgba(0,255,136,.55);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 7px 10px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+}
+
+.nav-tab:hover,
+.nav-tab.active {
+  color: var(--green);
+  border-color: var(--border-bright);
+  background: var(--green-faint);
+}
+
+main {
+  align-items: stretch;
+  width: 100%;
+}
+
+.app-view {
+  display: none;
+  width: min(1280px, 100%);
+  margin: 0 auto;
+  gap: 14px;
+}
+
+.app-view.active {
+  display: flex;
+  flex-direction: column;
+}
+
+.section-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 2px 0 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.section-kicker,
+.panel-heading,
+.label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: rgba(0,255,136,.46);
+}
+
+.section-header h2 {
+  font-family: var(--font-display);
+  font-size: clamp(18px, 2vw, 26px);
+  letter-spacing: .12em;
+  color: var(--green);
+  margin-top: 5px;
+}
+
+.section-actions,
+.form-actions,
+.panel-actions,
+.run-controls,
+.replay-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.monitor-layout,
+.run-layout,
+.replay-layout,
+.config-layout {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+}
+
+.monitor-layout,
+.run-layout,
+.replay-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  align-items: start;
+}
+
+.config-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 430px);
+  align-items: start;
+}
+
+main .monitor-layout .viewport,
+main .run-layout .viewport {
+  width: 100%;
+  max-width: none;
+}
+
+.side-panel,
+.config-list-shell,
+.config-editor,
+.replay-player {
+  border: 1px solid var(--border);
+  background: rgba(5, 15, 8, .84);
+  min-width: 0;
+}
+
+.side-panel,
+.config-editor {
+  padding: 16px;
+}
+
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.status-stack {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.status-stack strong,
+[data-test-status] {
+  color: var(--green);
+  font-family: var(--font-display);
+  font-size: 16px;
+  letter-spacing: .08em;
+  overflow-wrap: anywhere;
+}
+
+[data-test-status].running {
+  color: var(--yellow);
+  text-shadow: 0 0 10px rgba(255,224,102,.4);
+  animation: blink 1s ease-in-out infinite;
+}
+
+[data-test-status].pass {
+  color: var(--green);
+  text-shadow: 0 0 10px var(--green-dim);
+}
+
+[data-test-status].fail {
+  color: var(--red);
+  text-shadow: 0 0 10px rgba(255,59,59,.35);
+}
+
+[data-test-status].killed {
+  color: var(--yellow);
+}
+
+.metrics-block {
+  display: grid;
+  gap: 8px;
+  color: rgba(0,255,136,.78);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.metric-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(0,255,136,.12);
+}
+
+.metric-line span {
+  color: rgba(0,255,136,.5);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: 11px;
+}
+
+.metric-line strong {
+  color: var(--green);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.metric-line.fail-line strong {
+  color: var(--red);
+}
+
+.vision-overlay {
+  position: absolute;
+  inset: 18px;
+  border: 1px dashed rgba(255,224,102,.55);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.config-list {
+  display: flex;
+  flex-direction: column;
+  max-height: min(610px, 70vh);
+  overflow-y: auto;
+}
+
+.config-row,
+.report-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--green);
+  font-family: var(--font-mono);
+  padding: 15px 16px;
+  text-align: left;
+  cursor: pointer;
+  transition: background .15s, box-shadow .15s;
+}
+
+.config-row:hover,
+.config-row.selected,
+.report-row:hover {
+  background: var(--green-faint);
+}
+
+.config-row.selected {
+  box-shadow: inset 3px 0 0 var(--green);
+}
+
+.row-main,
+.row-meta {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.row-main strong {
+  font-size: 16px;
+  color: var(--green);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-main small,
+.row-meta span {
+  color: rgba(0,255,136,.52);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-meta {
+  justify-items: end;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.report-row.fail {
+  box-shadow: inset 3px 0 0 var(--red);
+}
+
+.report-row.pass {
+  box-shadow: inset 3px 0 0 var(--green);
+}
+
+.report-row.killed {
+  box-shadow: inset 3px 0 0 var(--yellow);
+}
+
+.config-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.config-editor label,
+.side-panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: rgba(0,255,136,.7);
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.config-editor label.checkbox-label {
+  flex-direction: row;
+  align-items: center;
+  text-transform: none;
+  letter-spacing: .04em;
+  font-size: 13px;
+}
+
+.config-editor input,
+.config-editor textarea,
+.config-editor select,
+.side-panel input {
+  width: 100%;
+  min-width: 0;
+  background: #0a160d;
+  border: 1px solid var(--border-bright);
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  padding: 9px 10px;
+  outline: none;
+}
+
+.config-editor textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+.config-editor input:focus,
+.config-editor textarea:focus,
+.config-editor select:focus,
+.side-panel input:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 8px rgba(0,255,136,.15);
+}
+
+.config-editor input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--green);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.inline-status {
+  min-height: 18px;
+  color: rgba(0,255,136,.48);
+  font-size: 12px;
+  letter-spacing: .08em;
+}
+
+.inline-status.ok {
+  color: var(--green);
+}
+
+.inline-status.err,
+.empty-state.err {
+  color: var(--red);
+}
+
+.empty-state {
+  padding: 24px;
+  color: rgba(0,255,136,.42);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.reports-list {
+  border: 1px solid var(--border);
+  background: rgba(5, 15, 8, .84);
+}
+
+.replay-player {
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.replay-frame {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: min(56vh, 520px);
+  background: #000;
+  border: 1px solid var(--border);
+  color: rgba(0,255,136,.46);
+  font-size: 13px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.replay-frame .replay-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+}
+
+.replay-frame .replay-image.loaded {
+  opacity: 1;
+}
+
+.replay-badge {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  padding: 5px 8px;
+  background: rgba(0,0,0,.72);
+  border: 1px solid var(--border);
+  color: var(--green);
+  font-size: 11px;
+  letter-spacing: .08em;
+}
+
+.replay-loading {
+  position: absolute;
+  inset: 0;
+  display: none;
+  place-items: center;
+  background: rgba(0,0,0,.45);
+  color: rgba(0,255,136,.7);
+  font-size: 12px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.replay-loading.active {
+  display: grid;
+}
+
+.replay-scrubber {
+  width: 100%;
+  accent-color: var(--green);
+}
+
+.timeline-shell {
+  display: grid;
+  gap: 10px;
+}
+
+.timeline-list {
+  display: grid;
+  gap: 8px;
+}
+
+.timeline-item {
+  display: grid;
+  gap: 4px;
+  padding-left: 10px;
+  border-left: 1px solid var(--border-bright);
+}
+
+.timeline-item span {
+  color: rgba(0,255,136,.48);
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.timeline-item strong {
+  color: var(--green);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 980px) {
+  .monitor-layout,
+  .run-layout,
+  .replay-layout,
+  .config-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .side-panel {
+    order: 2;
+  }
+
+  .brand-block {
+    width: 100%;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 680px) {
+  header {
+    align-items: flex-start;
+  }
+
+  .brand-block {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .header-actions,
+  .section-header {
+    width: 100%;
+  }
+
+  .section-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .header-actions .action-btn,
+  .section-actions .action-btn,
+  .form-actions .action-btn,
+  .panel-actions .action-btn,
+  .run-controls .action-btn {
+    flex: 1;
+  }
+
+  .form-grid,
+  .config-row,
+  .report-row {
+    grid-template-columns: 1fr;
+  }
+
+  .row-meta {
+    justify-items: start;
+  }
+}
+
 /* ══════════════════════════════════════════════════════════════════════════════
    CONTROLS ROW  (test buttons + PTZ side by side)
 ══════════════════════════════════════════════════════════════════════════════ */

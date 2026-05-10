@@ -20,6 +20,7 @@ from backend.database.database import (
     get_config_by_id,
     get_test_parameters,
     insert_test_parameter,
+    replace_test_parameters,
     update_test_config,
 )
 from backend.schemas import TestConfigCreate, TestConfigResponse
@@ -61,7 +62,9 @@ def update_config(config_id: int, config: TestConfigCreate):
     if not get_config_by_id(config_id):
         raise HTTPException(status_code=404, detail="Config not found")
     update_test_config(config_id, config.name, config.description, config.type)
-    return {"ok": True}
+    replace_test_parameters(config_id, config.parameters)
+    row = get_config_by_id(config_id)
+    return {**dict(row), "parameters": get_test_parameters(config_id)}
 
 
 @router.delete("/{config_id}")

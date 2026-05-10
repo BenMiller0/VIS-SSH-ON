@@ -8,6 +8,7 @@ lifecycle is handled in one place.
 
 import sqlite3
 from pathlib import Path
+from typing import Any
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH  = BASE_DIR / "tests.db"
@@ -40,6 +41,81 @@ def execute(query: str, params: tuple = ()) -> int:
         conn.close()
 
 
+def execute_many(query: str, params: list[tuple]) -> None:
+    conn = get_connection()
+    try:
+        conn.executemany(query, params)
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def initialize_database() -> None:
+    conn = get_connection()
+    try:
+        conn.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS test_configs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                description TEXT,
+                type TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS test_parameters (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                test_config_id INTEGER,
+                key TEXT,
+                value TEXT,
+                FOREIGN KEY (test_config_id) REFERENCES test_configs(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS test_runs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                test_config_id INTEGER,
+                start_time DATETIME,
+                end_time DATETIME,
+                status TEXT DEFAULT 'running',
+                failure_reason TEXT,
+                FOREIGN KEY (test_config_id) REFERENCES test_configs(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS test_results (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                test_run_id INTEGER,
+                metric TEXT,
+                value TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (test_run_id) REFERENCES test_runs(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS test_run_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                test_run_id INTEGER,
+                event_type TEXT NOT NULL,
+                message TEXT,
+                payload TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (test_run_id) REFERENCES test_runs(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS test_run_artifacts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                test_run_id INTEGER,
+                artifact_type TEXT NOT NULL,
+                path TEXT NOT NULL,
+                metadata TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (test_run_id) REFERENCES test_runs(id)
+            );
+            """
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 # ── Test runs ─────────────────────────────────────────────────────────────────
 
 def create_test_run(test_config_id: int, start_time) -> int:
@@ -60,7 +136,14 @@ def get_test_runs() -> list[sqlite3.Row]:
     return query_all("SELECT * FROM test_runs ORDER BY id DESC")
 
 
+def get_test_run_by_id(run_id: int) -> sqlite3.Row | None:
+    rows = query_all("SELECT * FROM test_runs WHERE id = ?", (run_id,))
+    return rows[0] if rows else None
+
+
 def delete_test_run(run_id: int):
+    execute("DELETE FROM test_run_artifacts WHERE test_run_id = ?", (run_id,))
+    execute("DELETE FROM test_run_events WHERE test_run_id = ?", (run_id,))
     execute("DELETE FROM test_results WHERE test_run_id = ?", (run_id,))
     execute("DELETE FROM test_runs WHERE id = ?", (run_id,))
 
@@ -76,7 +159,34 @@ def insert_result(run_id: int, metric: str, value: str):
 
 def get_results_for_run(run_id: int) -> list[sqlite3.Row]:
     return query_all(
-        "SELECT metric, value, timestamp FROM test_results WHERE test_run_id = ?",
+        "SELECT metric, value, timestamp FROM test_results WHERE test_run_id = ? ORDER BY id",
+        (run_id,),
+    )
+
+def insert_event(run_id: int, event_type: str, message: str | None = None, payload: str | None = None):
+    execute(
+        "INSERT INTO test_run_events (test_run_id, event_type, message, payload) VALUES (?, ?, ?, ?)",
+        (run_id, event_type, message, payload),
+    )
+
+
+def get_events_for_run(run_id: int) -> list[sqlite3.Row]:
+    return query_all(
+        "SELECT event_type, message, payload, timestamp FROM test_run_events WHERE test_run_id = ? ORDER BY id",
+        (run_id,),
+    )
+
+
+def insert_artifact(run_id: int, artifact_type: str, path: str, metadata: str | None = None) -> int:
+    return execute(
+        "INSERT INTO test_run_artifacts (test_run_id, artifact_type, path, metadata) VALUES (?, ?, ?, ?)",
+        (run_id, artifact_type, path, metadata),
+    )
+
+
+def get_artifacts_for_run(run_id: int) -> list[sqlite3.Row]:
+    return query_all(
+        "SELECT id, artifact_type, path, metadata, created_at FROM test_run_artifacts WHERE test_run_id = ? ORDER BY id",
         (run_id,),
     )
 
@@ -126,3 +236,16 @@ def get_test_parameters(test_config_id: int) -> dict[str, str]:
         (test_config_id,),
     )
     return {row["key"]: row["value"] for row in rows}
+
+
+def replace_test_parameters(test_config_id: int, parameters: dict[str, Any]):
+    execute("DELETE FROM test_parameters WHERE test_config_id = ?", (test_config_id,))
+    rows = [(test_config_id, key, str(value)) for key, value in parameters.items()]
+    if rows:
+        execute_many(
+            "INSERT INTO test_parameters (test_config_id, key, value) VALUES (?, ?, ?)",
+            rows,
+        )
+
+
+initialize_database()

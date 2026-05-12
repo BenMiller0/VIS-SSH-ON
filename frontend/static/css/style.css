@@ -725,6 +725,17 @@ main {
   flex-direction: column;
 }
 
+.field-hidden {
+  display: none;
+}
+
+.type-notice,
+.field-note {
+  color: var(--border-bright);
+  font-size: 0.95rem;
+  margin: 0 0 16px;
+}
+
 .section-header {
   display: flex;
   align-items: end;
@@ -1027,6 +1038,10 @@ main .run-layout .viewport {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.form-grid.field-hidden {
+  display: none;
 }
 
 .inline-status {

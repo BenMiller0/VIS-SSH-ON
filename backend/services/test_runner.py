@@ -257,7 +257,7 @@ def run_test(
                         "note": failure_reason,
                     }
 
-            if metric_name in {"thermal", "custom"} and temperature > max_temp:
+            if metric_name == "thermal" and temperature > max_temp:
                 status = "fail"
                 failure_reason = f"temperature > {max_temp} ({temperature})"
                 failure_payload = {
@@ -292,7 +292,7 @@ def run_test(
                     "timestamp": datetime.now().isoformat(timespec="milliseconds"),
                     "note": failure_reason,
                 }
-            elif require_pixel_change and metric_name != "arm_direction" and not pixel_change:
+            elif require_pixel_change and metric_name not in {"arm_direction", "custom"} and not pixel_change:
                 status = "fail"
                 failure_reason = "pixel did not change"
                 failure_payload = {
@@ -325,6 +325,13 @@ def run_test(
         if registry is not None:
             registry.pop(run_id, None)
 
+        thresholds = {}
+        if config_type == "vision":
+            thresholds["confidence_threshold"] = confidence_threshold
+        elif config_type == "thermal":
+            thresholds["max_temp"] = max_temp
+        # For custom, no thresholds
+
         broadcast({
             "type": "result",
             "run_id": run_id,
@@ -332,11 +339,7 @@ def run_test(
             "failure_reason": failure_reason,
             "failure": failure_payload,
             "artifact": replay_artifact,
-            "thresholds": {
-                "max_temp": max_temp,
-                "require_pixel_change": require_pixel_change,
-                "confidence_threshold": confidence_threshold,
-            },
+            "thresholds": thresholds,
         })
 
     return run_id

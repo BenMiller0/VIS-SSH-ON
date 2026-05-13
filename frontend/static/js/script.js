@@ -806,7 +806,13 @@ function wireEvents() {
         btn.addEventListener('click', () => showView(btn.dataset.viewTarget));
     });
 
-    $('#refresh-reports-btn')?.addEventListener('click', loadReports);
+    $('#new-config-btn')?.addEventListener('click', () => {
+        selectedConfig = null;
+        fillConfigForm(emptyConfig());
+        renderConfigList();
+        updateSelectedConfigSummary();
+    });
+
     $('#reports-filter')?.addEventListener('change', event => {
         currentTypeFilter = event.target.value;
         renderReports();

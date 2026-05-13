@@ -7,8 +7,8 @@
     <title>VIS-SSH-ON</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Share+Tech+Mono&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css">
-    <link rel="icon" type="image/x-icon" href="/static/favicon.png">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" type="image/x-icon" href="/static/favicon/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/dracula.min.css">
 </head>
@@ -90,8 +90,7 @@
                     <h2>Configured Tests</h2>
                 </div>
                 <div class="section-actions">
-                    <button id="new-arm-config-btn" class="action-btn">+ ARM TEST</button>
-                    <button id="refresh-configs-btn" class="action-btn">REFRESH</button>
+                    <button id="new-config-btn" class="action-btn">+ ADD</button>
                 </div>
             </div>
 
@@ -112,35 +111,33 @@
                     </label>
                     <label>Test Type
                         <select id="config-type">
+                            <option value="" selected disabled>Select a test type</option>
                             <option value="vision">Computer Vision</option>
                             <option value="thermal">Thermal</option>
                             <option value="custom">Custom</option>
                         </select>
                     </label>
-                    <div class="form-grid">
-                        <label>Expected Direction
-                            <select id="config-expected-direction">
-                                <option value="counterclockwise">Counterclockwise</option>
-                                <option value="clockwise">Clockwise</option>
-                            </select>
-                        </label>
-                        <label>Duration (seconds)
-                            <input id="config-duration" type="number" min="0" value="10" />
-                        </label>
-                        <label>Pre-Failure Buffer
-                            <input id="config-pre-buffer" type="number" min="1" value="5" />
-                        </label>
-                        <label>Confidence Threshold
-                            <input id="config-confidence" type="number" min="0" max="1" step="0.05" value="0.75" />
-                        </label>
+                    <div id="config-type-required" class="type-notice">Select a test type to reveal settings.</div>
+                    <div id="config-type-fields">
+                        <div id="vision-fields" class="form-grid field-hidden">
+                            <label>Expected Direction
+                                <select id="config-expected-direction">
+                                    <option value="counterclockwise">Counterclockwise</option>
+                                    <option value="clockwise">Clockwise</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div id="thermal-fields" class="form-grid field-hidden">
+                            <label>Max Temperature Threshold (°C)
+                                <input id="config-max-temperature" type="number" min="0" step="0.1" />
+                            </label>
+                        </div>
+                        <div id="custom-fields" class="field-hidden"></div>
                     </div>
-                    <label class="checkbox-label">
-                        <input id="config-enable-thermal" type="checkbox" checked />
-                        Include thermal stream
-                    </label>
                     <div class="form-actions">
                         <button type="submit" class="action-btn">SAVE CONFIG</button>
                         <button type="button" id="run-selected-config-btn" class="action-btn">RUN SELECTED</button>
+                        <button type="button" id="delete-config-btn" class="action-btn">DELETE</button>
                     </div>
                     <div id="config-save-status" class="inline-status"></div>
                 </form>
@@ -193,7 +190,24 @@
                     <span class="section-kicker">Run History</span>
                     <h2>Reports</h2>
                 </div>
-                <button id="refresh-reports-btn" class="action-btn">REFRESH</button>
+                <div class="section-actions">
+                    <label>Test Type Filter
+                        <select id="reports-filter">
+                            <option value="all">All Tests</option>
+                            <option value="vision">Computer Vision</option>
+                            <option value="thermal">Thermal</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </label>
+                    <label>Status Filter
+                        <select id="reports-status-filter">
+                            <option value="all">All Statuses</option>
+                            <option value="pass">Passed</option>
+                            <option value="fail">Failed</option>
+                            <option value="killed">Stopped</option>
+                        </select>
+                    </label>
+                </div>
             </div>
             <div id="reports-list" class="reports-list">
                 <div class="empty-state">Loading reports...</div>
@@ -337,11 +351,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script>
-    <script src="/static/script.js"></script>
-    <script src="/static/editor.js"></script>
-    <script src="/static/flash.js"></script>
-    <script src="/static/ptz.js"></script>
-    <script src="/static/serial.js"></script>
+    <script src="/static/js/script.js"></script>
+    <script src="/static/js/editor.js"></script>
+    <script src="/static/js/flash.js"></script>
+    <script src="/static/js/ptz.js"></script>
+    <script src="/static/js/serial.js"></script>
 </body>
 
 </html>

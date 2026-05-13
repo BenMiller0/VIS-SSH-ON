@@ -725,6 +725,17 @@ main {
   flex-direction: column;
 }
 
+.field-hidden {
+  display: none;
+}
+
+.type-notice,
+.field-note {
+  color: var(--border-bright);
+  font-size: 0.95rem;
+  margin: 0 0 16px;
+}
+
 .section-header {
   display: flex;
   align-items: end;
@@ -964,6 +975,21 @@ main .run-layout .viewport {
   box-shadow: inset 3px 0 0 var(--yellow);
 }
 
+.report-delete-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 59, 59, .35);
+  color: var(--red);
+  padding: 6px 10px;
+  font-size: 11px;
+  text-transform: uppercase;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.report-delete-btn:hover {
+  background: rgba(255, 59, 59, .08);
+}
+
 .config-editor {
   display: flex;
   flex-direction: column;
@@ -1027,6 +1053,10 @@ main .run-layout .viewport {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.form-grid.field-hidden {
+  display: none;
 }
 
 .inline-status {

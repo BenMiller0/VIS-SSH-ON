@@ -7,6 +7,8 @@ let selectedConfig = null;
 let selectedRun = null;
 let configs = [];
 let runs = [];
+let currentTypeFilter = 'all';
+let currentStatusFilter = 'all';
 let lastMetric = null;
 let lastFailureByRun = {};
 const replayState = {
@@ -99,23 +101,24 @@ function renderTest(data) {
 
     if (data.type === 'metric') {
         lastMetric = data;
+        const testType = selectedConfig?.type;
         const metricRows = [];
 
-        if (data.temperature !== undefined) {
+        if (testType === 'thermal' && data.temperature !== undefined) {
             metricRows.push(`<div class="metric-line"><span>Temp</span><strong>${escapeHtml(data.temperature)} deg C</strong></div>`);
         }
-        if (data.pixel_changed !== undefined) {
-            metricRows.push(`<div class="metric-line"><span>Pixel Changed</span><strong>${escapeHtml(data.pixel_changed)}</strong></div>`);
+        if (testType === 'vision') {
+            if (data.expected_direction || data.observed_direction) {
+                metricRows.push(
+                    `<div class="metric-line"><span>Expected</span><strong>${escapeHtml(data.expected_direction ?? '-')}</strong></div>`,
+                    `<div class="metric-line"><span>Observed</span><strong>${escapeHtml(data.observed_direction ?? '-')}</strong></div>`
+                );
+            }
+            if (data.confidence !== undefined) {
+                metricRows.push(`<div class="metric-line"><span>Confidence</span><strong>${escapeHtml(data.confidence)}</strong></div>`);
+            }
         }
-        if (data.expected_direction || data.observed_direction) {
-            metricRows.push(
-                `<div class="metric-line"><span>Expected</span><strong>${escapeHtml(data.expected_direction ?? '-')}</strong></div>`,
-                `<div class="metric-line"><span>Observed</span><strong>${escapeHtml(data.observed_direction ?? '-')}</strong></div>`
-            );
-        }
-        if (data.confidence !== undefined) {
-            metricRows.push(`<div class="metric-line"><span>Confidence</span><strong>${escapeHtml(data.confidence)}</strong></div>`);
-        }
+        // For custom, no metrics during execution
 
         setMetrics(metricRows.join('') || '<div class="metric-line">Waiting for metrics...</div>');
         return;
@@ -135,8 +138,10 @@ function renderTest(data) {
                 artifact: data.artifact,
             };
 
+            const allowedThresholdKeys = new Set(['max_temp']);
             const thresholdRows = data.thresholds
                 ? Object.entries(data.thresholds)
+                    .filter(([key]) => allowedThresholdKeys.has(key))
                     .map(([key, value]) => `<div class="metric-line"><span>${escapeHtml(key)}</span><strong>${escapeHtml(value)}</strong></div>`)
                     .join('')
                 : '';
@@ -256,49 +261,60 @@ function connectCamera() {
     };
 }
 
-function armDefaults() {
+function emptyConfig() {
     return {
-        name: 'Robotic Arm Direction Test',
-        description: 'Detects when the arm rotates opposite the expected direction.',
-        type: 'vision',
-        parameters: {
-            expected_direction: 'counterclockwise',
-            duration_seconds: '10',
-            pre_failure_seconds: '5',
-            post_failure_seconds: '2',
-            confidence_threshold: '0.75',
-            include_thermal: 'true',
-            metric: 'arm_direction',
-        },
+        name: '',
+        description: '',
+        type: '',
+        parameters: {},
     };
 }
 
-function fillConfigForm(config = armDefaults()) {
+function updateConfigTypeFields(type) {
+    const visionSection = $('#vision-fields');
+    const thermalSection = $('#thermal-fields');
+    const customSection = $('#custom-fields');
+    const typeNotice = $('#config-type-required');
+
+    if (visionSection) visionSection.classList.toggle('field-hidden', type !== 'vision');
+    if (thermalSection) thermalSection.classList.toggle('field-hidden', type !== 'thermal');
+    if (customSection) customSection.classList.toggle('field-hidden', type !== 'custom');
+    if (typeNotice) typeNotice.style.display = type ? 'none' : 'block';
+}
+
+function fillConfigForm(config = emptyConfig()) {
     const params = config.parameters ?? {};
     $('#config-name').value = config.name ?? '';
     $('#config-description').value = config.description ?? '';
-    $('#config-type').value = config.type ?? 'vision';
+    $('#config-type').value = config.type ?? '';
     $('#config-expected-direction').value = params.expected_direction ?? 'counterclockwise';
-    $('#config-duration').value = params.duration_seconds ?? '10';
-    $('#config-pre-buffer').value = params.pre_failure_seconds ?? '5';
-    $('#config-confidence').value = params.confidence_threshold ?? '0.75';
-    $('#config-enable-thermal').checked = params.include_thermal !== 'false';
+    $('#config-max-temperature').value = params.max_temp ?? '';
+    updateConfigTypeFields(config.type ?? '');
 }
 
 function collectConfigForm() {
+    const type = $('#config-type').value;
+    const params = {};
+
+    if (type === 'vision') {
+        params.expected_direction = $('#config-expected-direction').value;
+        params.metric = 'arm_direction';
+        params.include_thermal = 'true';
+    } else if (type === 'thermal') {
+        const maxTemp = parseFloat($('#config-max-temperature').value);
+        params.max_temp = String(Number.isFinite(maxTemp) ? maxTemp : 75);
+        params.metric = 'thermal';
+        params.include_thermal = 'true';
+    } else {
+        params.metric = 'custom';
+        params.include_thermal = 'true';
+    }
+
     return {
         name: $('#config-name').value.trim() || 'Unnamed Test',
         description: $('#config-description').value.trim(),
-        type: $('#config-type').value,
-        parameters: {
-            expected_direction: $('#config-expected-direction').value,
-            duration_seconds: String(parseInt($('#config-duration').value, 10) || 0),
-            pre_failure_seconds: String(parseInt($('#config-pre-buffer').value, 10) || 5),
-            post_failure_seconds: '2',
-            confidence_threshold: String(parseFloat($('#config-confidence').value) || 0.75),
-            include_thermal: String($('#config-enable-thermal').checked),
-            metric: $('#config-type').value === 'vision' ? 'arm_direction' : $('#config-type').value,
-        },
+        type,
+        parameters: params,
     };
 }
 
@@ -312,11 +328,9 @@ async function loadConfigs() {
             return r.json();
         });
 
-        if (!selectedConfig && configs.length) {
-            selectedConfig = configs[0];
-            fillConfigForm(selectedConfig);
-        } else if (selectedConfig) {
+        if (selectedConfig) {
             selectedConfig = configs.find(config => config.id === selectedConfig.id) ?? selectedConfig;
+            if (selectedConfig?.id) fillConfigForm(selectedConfig);
         }
 
         renderConfigList();
@@ -369,6 +383,26 @@ function renderConfigList() {
     });
 }
 
+async function deleteConfig() {
+    if (!selectedConfig?.id) return;
+    if (!confirm(`Delete config "${selectedConfig.name}"? This cannot be undone.`)) return;
+
+    try {
+        const res = await fetch(`/api/configs/${selectedConfig.id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        selectedConfig = null;
+        fillConfigForm(emptyConfig());
+        renderConfigList();
+        updateSelectedConfigSummary();
+        await loadConfigs();
+        return true;
+    } catch (err) {
+        console.error('Delete failed:', err);
+        alert('Could not delete config.');
+        return false;
+    }
+}
+
 async function saveConfig() {
     const status = $('#config-save-status');
     const payload = collectConfigForm();
@@ -376,6 +410,14 @@ async function saveConfig() {
     if (status) {
         status.textContent = 'Saving...';
         status.className = 'inline-status';
+    }
+
+    if (!payload.type) {
+        if (status) {
+            status.textContent = 'Please select a test type.';
+            status.className = 'inline-status err';
+        }
+        return null;
     }
 
     try {
@@ -462,6 +504,26 @@ async function loadReports() {
     }
 }
 
+function deleteReport(runId) {
+    if (!confirm(`Delete report #${runId}?`)) return;
+
+    fetch(`/api/tests/${runId}`, { method: 'DELETE' })
+        .then(res => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+        })
+        .then(() => {
+            if (selectedRun?.id === runId) {
+                selectedRun = null;
+            }
+            loadReports();
+        })
+        .catch(err => {
+            console.error('Could not delete report:', err);
+            alert('Could not delete report.');
+        });
+}
+
 function configNameForRun(run) {
     return configs.find(config => config.id === run.test_config_id)?.name ?? `Config #${run.test_config_id}`;
 }
@@ -476,7 +538,23 @@ function renderReports() {
         return;
     }
 
-    runs.forEach(run => {
+    const filteredRuns = runs.filter(run => {
+        if (currentTypeFilter !== 'all') {
+            const config = configs.find(c => c.id === run.test_config_id);
+            if (config?.type !== currentTypeFilter) return false;
+        }
+        if (currentStatusFilter !== 'all' && run.status !== currentStatusFilter) {
+            return false;
+        }
+        return true;
+    });
+
+    if (!filteredRuns.length) {
+        list.innerHTML = '<div class="empty-state">No matching test runs.</div>';
+        return;
+    }
+
+    filteredRuns.forEach(run => {
         const row = document.createElement('button');
         row.type = 'button';
         row.className = `report-row ${run.status}`;
@@ -489,6 +567,7 @@ function renderReports() {
             <span class="row-meta">
                 <span>${escapeHtml(run.status)}</span>
                 <span>${escapeHtml(run.end_time ? 'complete' : 'active')}</span>
+                <button type="button" class="report-delete-btn">DELETE</button>
             </span>
         `;
 
@@ -496,6 +575,12 @@ function renderReports() {
             selectedRun = run;
             renderReplay(run);
             showView('replay-view');
+        });
+
+        const deleteBtn = row.querySelector('.report-delete-btn');
+        deleteBtn?.addEventListener('click', event => {
+            event.stopPropagation();
+            deleteReport(run.id);
         });
 
         list.appendChild(row);
@@ -721,13 +806,24 @@ function wireEvents() {
         btn.addEventListener('click', () => showView(btn.dataset.viewTarget));
     });
 
-    $('#refresh-configs-btn')?.addEventListener('click', loadConfigs);
-    $('#refresh-reports-btn')?.addEventListener('click', loadReports);
-    $('#new-arm-config-btn')?.addEventListener('click', () => {
+    $('#new-config-btn')?.addEventListener('click', () => {
         selectedConfig = null;
-        fillConfigForm(armDefaults());
+        fillConfigForm(emptyConfig());
         renderConfigList();
         updateSelectedConfigSummary();
+    });
+
+    $('#reports-filter')?.addEventListener('change', event => {
+        currentTypeFilter = event.target.value;
+        renderReports();
+    });
+    $('#reports-status-filter')?.addEventListener('change', event => {
+        currentStatusFilter = event.target.value;
+        renderReports();
+    });
+
+    $('#config-type')?.addEventListener('change', event => {
+        if (event.target) updateConfigTypeFields(event.target.value);
     });
 
     $('#config-form')?.addEventListener('submit', event => {
@@ -736,13 +832,14 @@ function wireEvents() {
     });
 
     $('#run-selected-config-btn')?.addEventListener('click', startSelectedTest);
+    $('#delete-config-btn')?.addEventListener('click', deleteConfig);
     $('#start-run-btn')?.addEventListener('click', startSelectedTest);
     $('#stop-btn')?.addEventListener('click', stopTest);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     wireEvents();
-    fillConfigForm(armDefaults());
+    fillConfigForm(emptyConfig());
     updateSelectedConfigSummary();
     connectCamera();
     connectThermal();

@@ -7,6 +7,8 @@ let selectedConfig = null;
 let selectedRun = null;
 let configs = [];
 let runs = [];
+let currentTypeFilter = 'all';
+let currentStatusFilter = 'all';
 let lastMetric = null;
 let lastFailureByRun = {};
 const replayState = {
@@ -502,6 +504,26 @@ async function loadReports() {
     }
 }
 
+function deleteReport(runId) {
+    if (!confirm(`Delete report #${runId}?`)) return;
+
+    fetch(`/api/tests/${runId}`, { method: 'DELETE' })
+        .then(res => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+        })
+        .then(() => {
+            if (selectedRun?.id === runId) {
+                selectedRun = null;
+            }
+            loadReports();
+        })
+        .catch(err => {
+            console.error('Could not delete report:', err);
+            alert('Could not delete report.');
+        });
+}
+
 function configNameForRun(run) {
     return configs.find(config => config.id === run.test_config_id)?.name ?? `Config #${run.test_config_id}`;
 }
@@ -516,7 +538,23 @@ function renderReports() {
         return;
     }
 
-    runs.forEach(run => {
+    const filteredRuns = runs.filter(run => {
+        if (currentTypeFilter !== 'all') {
+            const config = configs.find(c => c.id === run.test_config_id);
+            if (config?.type !== currentTypeFilter) return false;
+        }
+        if (currentStatusFilter !== 'all' && run.status !== currentStatusFilter) {
+            return false;
+        }
+        return true;
+    });
+
+    if (!filteredRuns.length) {
+        list.innerHTML = '<div class="empty-state">No matching test runs.</div>';
+        return;
+    }
+
+    filteredRuns.forEach(run => {
         const row = document.createElement('button');
         row.type = 'button';
         row.className = `report-row ${run.status}`;
@@ -529,6 +567,7 @@ function renderReports() {
             <span class="row-meta">
                 <span>${escapeHtml(run.status)}</span>
                 <span>${escapeHtml(run.end_time ? 'complete' : 'active')}</span>
+                <button type="button" class="report-delete-btn">DELETE</button>
             </span>
         `;
 
@@ -536,6 +575,12 @@ function renderReports() {
             selectedRun = run;
             renderReplay(run);
             showView('replay-view');
+        });
+
+        const deleteBtn = row.querySelector('.report-delete-btn');
+        deleteBtn?.addEventListener('click', event => {
+            event.stopPropagation();
+            deleteReport(run.id);
         });
 
         list.appendChild(row);
@@ -762,6 +807,14 @@ function wireEvents() {
     });
 
     $('#refresh-reports-btn')?.addEventListener('click', loadReports);
+    $('#reports-filter')?.addEventListener('change', event => {
+        currentTypeFilter = event.target.value;
+        renderReports();
+    });
+    $('#reports-status-filter')?.addEventListener('change', event => {
+        currentStatusFilter = event.target.value;
+        renderReports();
+    });
 
     $('#config-type')?.addEventListener('change', event => {
         if (event.target) updateConfigTypeFields(event.target.value);

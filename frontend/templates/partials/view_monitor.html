@@ -1,0 +1,49 @@
+<section id="monitor-view" class="app-view active">
+            <div class="status-bar">
+                Status: <span id="status" class="disconnected">Disconnected</span>
+            </div>
+
+            <div class="monitor-layout">
+                <div class="viewport">
+                    <img id="image" data-camera-feed height="400" alt="Live camera feed" />
+                    <canvas id="heatmap" data-heatmap width="8" height="8"></canvas>
+                    <div id="monitor-overlay" class="vision-overlay" hidden></div>
+                </div>
+
+                <aside class="side-panel">
+                    <div class="panel-heading">Current Run</div>
+                    <div class="status-stack">
+                        <span class="label">Selected Test</span>
+                        <strong id="monitor-selected-test">No test selected</strong>
+                    </div>
+                    <div class="status-stack">
+                        <span class="label">Run State</span>
+                        <strong data-test-status>IDLE</strong>
+                    </div>
+                    <div id="monitor-metrics" data-test-metrics class="metrics-block"></div>
+                    <div class="panel-actions">
+                        <button class="action-btn" data-view-target="configs-view">TEST CONFIGS</button>
+                        <button class="action-btn" data-view-target="run-view">RUN WORKSPACE</button>
+                    </div>
+                    <div class="cam-ctrl" id="cam-ctrl">
+                        <div class="cam-ctrl-label">CAM CONTROLLER</div>
+                        <div class="cam-ctrl-body">
+                            <div class="cam-dpad">
+                                <button class="dpad-btn dpad-up" data-dir="up" aria-label="Tilt Up"></button>
+                                <button class="dpad-btn dpad-left" data-dir="left" aria-label="Pan Left"></button>
+                                <button class="dpad-btn dpad-center" data-dir="home" aria-label="Home / Center" title="HOME"></button>
+                                <button class="dpad-btn dpad-right" data-dir="right" aria-label="Pan Right"></button>
+                                <button class="dpad-btn dpad-down" data-dir="down" aria-label="Tilt Down"></button>
+                            </div>
+                            <div class="cam-side">
+                                <div class="cam-zoom">
+                                    <button class="zoom-btn" data-dir="zoom-in" aria-label="Zoom In">+</button>
+                                    <span class="zoom-label">ZOOM</span>
+                                    <button class="zoom-btn" data-dir="zoom-out" aria-label="Zoom Out">-</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </section>

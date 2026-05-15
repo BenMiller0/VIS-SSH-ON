@@ -1,0 +1,41 @@
+<div id="editor-modal" style="display:none; position:fixed; inset:0; z-index:9999;
+                background:rgba(0,0,0,0.88); align-items:center; justify-content:center;">
+        <div class="editor-shell">
+
+            <div id="screen-picker" style="display:flex; flex-direction:column; height:100%;">
+                <div class="modal-bar">
+                    <span class="bar-title">SELECT A FILE TO EDIT</span>
+                    <div class="bar-right">
+                        <button class="bar-new" id="toggle-new-file">+ NEW FILE</button>
+                        <button class="bar-close" id="close-picker">x</button>
+                    </div>
+                </div>
+                <div id="new-file-row" class="new-file-row" style="display:none;">
+                    <input id="new-file-input" class="new-file-input" type="text" placeholder="src/sensors.cpp"
+                        spellcheck="false" autocomplete="off" />
+                    <button id="new-file-confirm" class="bar-new confirm">CREATE</button>
+                    <span id="new-file-err" class="new-file-err"></span>
+                </div>
+                <div id="file-list" class="file-list"></div>
+            </div>
+
+            <div id="screen-editor" style="display:none; flex-direction:column; height:100%;">
+                <div class="modal-bar">
+                    <div class="bar-left">
+                        <button class="bar-back" id="back-btn">FILES</button>
+                        <span class="bar-file" id="bar-filename"></span>
+                    </div>
+                    <div class="bar-right">
+                        <span id="save-status" class="save-status"></span>
+                        <button class="bar-save" id="save-btn">SAVE</button>
+                        <button class="bar-close" id="close-editor">x</button>
+                    </div>
+                </div>
+                <div class="cm-wrap">
+                    <textarea id="code-editor"></textarea>
+                </div>
+                <div class="editor-hint">Ctrl+S save | Esc close</div>
+            </div>
+
+        </div>
+    </div>

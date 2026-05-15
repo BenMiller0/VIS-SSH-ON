@@ -1,0 +1,29 @@
+<section id="reports-view" class="app-view">
+            <div class="section-header">
+                <div>
+                    <span class="section-kicker">Run History</span>
+                    <h2>Reports</h2>
+                </div>
+                <div class="section-actions">
+                    <label>Test Type Filter
+                        <select id="reports-filter">
+                            <option value="all">All Tests</option>
+                            <option value="vision">Computer Vision</option>
+                            <option value="thermal">Thermal</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </label>
+                    <label>Status Filter
+                        <select id="reports-status-filter">
+                            <option value="all">All Statuses</option>
+                            <option value="pass">Passed</option>
+                            <option value="fail">Failed</option>
+                            <option value="killed">Stopped</option>
+                        </select>
+                    </label>
+                </div>
+            </div>
+            <div id="reports-list" class="reports-list">
+                <div class="empty-state">Loading reports...</div>
+            </div>
+        </section>

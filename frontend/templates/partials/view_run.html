@@ -1,0 +1,39 @@
+<section id="run-view" class="app-view">
+            <div class="section-header">
+                <div>
+                    <span class="section-kicker">Run Workspace</span>
+                    <h2 id="run-title">No Test Selected</h2>
+                </div>
+                <div class="section-actions">
+                    <button class="action-btn" data-view-target="configs-view">CHANGE TEST</button>
+                </div>
+            </div>
+
+            <div class="run-layout">
+                <div class="viewport">
+                    <img data-camera-feed height="400" alt="Run camera feed" />
+                    <canvas data-heatmap width="8" height="8"></canvas>
+                    <div id="run-overlay" class="vision-overlay" hidden></div>
+                </div>
+
+                <aside class="side-panel">
+                    <div class="panel-heading">Execution</div>
+                    <div class="status-stack">
+                        <span class="label">Expected</span>
+                        <strong id="run-expected-direction">-</strong>
+                    </div>
+                    <label>Duration (seconds)
+                        <input id="run-duration" type="number" min="0" value="10" />
+                    </label>
+                    <div class="run-controls">
+                        <button id="start-run-btn" class="action-btn">START</button>
+                        <button id="stop-btn" class="action-btn" style="display:none">STOP</button>
+                    </div>
+                    <div class="status-stack">
+                        <span class="label">Status</span>
+                        <strong data-test-status>IDLE</strong>
+                    </div>
+                    <div id="run-metrics" data-test-metrics class="metrics-block"></div>
+                </aside>
+            </div>
+        </section>

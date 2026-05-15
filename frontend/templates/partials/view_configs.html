@@ -1,0 +1,60 @@
+<section id="configs-view" class="app-view">
+            <div class="section-header">
+                <div>
+                    <span class="section-kicker">Test Library</span>
+                    <h2>Configured Tests</h2>
+                </div>
+                <div class="section-actions">
+                    <button id="new-config-btn" class="action-btn">+ ADD</button>
+                </div>
+            </div>
+
+            <div class="config-layout">
+                <div class="config-list-shell">
+                    <div id="config-list" class="config-list">
+                        <div class="empty-state">Loading configs...</div>
+                    </div>
+                </div>
+
+                <form id="config-form" class="config-editor">
+                    <div class="panel-heading">Config Details</div>
+                    <label>Test Name
+                        <input id="config-name" type="text" value="Robotic Arm Direction Test" />
+                    </label>
+                    <label>Description
+                        <textarea id="config-description" rows="3">Detects when the arm rotates opposite the expected direction.</textarea>
+                    </label>
+                    <label>Test Type
+                        <select id="config-type">
+                            <option value="" selected disabled>Select a test type</option>
+                            <option value="vision">Computer Vision</option>
+                            <option value="thermal">Thermal</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </label>
+                    <div id="config-type-required" class="type-notice">Select a test type to reveal settings.</div>
+                    <div id="config-type-fields">
+                        <div id="vision-fields" class="form-grid field-hidden">
+                            <label>Expected Direction
+                                <select id="config-expected-direction">
+                                    <option value="counterclockwise">Counterclockwise</option>
+                                    <option value="clockwise">Clockwise</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div id="thermal-fields" class="form-grid field-hidden">
+                            <label>Max Temperature Threshold (°C)
+                                <input id="config-max-temperature" type="number" min="0" step="0.1" />
+                            </label>
+                        </div>
+                        <div id="custom-fields" class="field-hidden"></div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="action-btn">SAVE CONFIG</button>
+                        <button type="button" id="run-selected-config-btn" class="action-btn">RUN SELECTED</button>
+                        <button type="button" id="delete-config-btn" class="action-btn">DELETE</button>
+                    </div>
+                    <div id="config-save-status" class="inline-status"></div>
+                </form>
+            </div>
+        </section>

@@ -1,0 +1,31 @@
+<section id="replay-view" class="app-view">
+            <div class="section-header">
+                <div>
+                    <span class="section-kicker">Failure Review</span>
+                    <h2 id="replay-title">Replay</h2>
+                </div>
+                <button class="action-btn" data-view-target="reports-view">REPORTS</button>
+            </div>
+
+            <div class="replay-layout">
+                <div class="replay-player">
+                    <div id="replay-frame" class="replay-frame">
+                        <span>No replay selected</span>
+                    </div>
+                    <input id="replay-scrubber" class="replay-scrubber" type="range" min="0" max="100" value="0" disabled />
+                    <div class="replay-controls">
+                        <button id="replay-play-btn" class="action-btn" disabled>PLAY</button>
+                        <button id="replay-pause-btn" class="action-btn" disabled>PAUSE</button>
+                    </div>
+                </div>
+
+                <aside class="side-panel">
+                    <div class="panel-heading">Failure Notes</div>
+                    <div id="replay-notes" class="metrics-block">Select a failed report to inspect.</div>
+                    <div class="timeline-shell">
+                        <div class="panel-heading">Timeline</div>
+                        <div id="replay-timeline" class="timeline-list"></div>
+                    </div>
+                </aside>
+            </div>
+        </section>

@@ -2,6 +2,7 @@
 
 // ── DOM ───────────────────────────────────────────────────────────────────────
 const flashBtn    = document.getElementById('flash-btn');
+const resetBtn = document.getElementById('reset-btn');
 const flashModal  = document.getElementById('flash-modal');
 const flashOutput = document.getElementById('flash-output');
 const flashClose  = document.getElementById('flash-close');
@@ -102,8 +103,14 @@ function closeFlashModal() {
   }, 3000);
 }
 
+async function runReset() { 
+  const res = await fetch('/api/flash/reset', {method: 'POST'});
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+}
+
 // ── Wiring ────────────────────────────────────────────────────────────────────
 flashBtn.addEventListener('click', runFlash);
+resetBtn.addEventListener('click', runReset);
 flashClose.addEventListener('click', closeFlashModal);
 flashModal.addEventListener('click', e => { if (e.target === flashModal) closeFlashModal(); });
 document.addEventListener('keydown', e => {

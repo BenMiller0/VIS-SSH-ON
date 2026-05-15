@@ -92,9 +92,9 @@ extern "C" void app_main(void) {
     ledc_channel_config(&servo2);
 
     int i = 0;
-    while (i != 10) {
+    while (i != 1) {
         set_servo_angle(LEDC_CHANNEL_0, 0);
-
+        vis.test_out("starting test!");
         /*
         move_servo_slow(LEDC_CHANNEL_0, 0, 90, 25, 1);
         esp_rom_delay_us(1000000);
@@ -104,10 +104,9 @@ extern "C" void app_main(void) {
         
 
         move_servo_slow(LEDC_CHANNEL_1, 0, 90, 25, 1);
-        esp_rom_delay_us(1000000);
+        esp_rom_delay_us(1000000 * 8);
 
         move_servo_slow(LEDC_CHANNEL_1, 90, 0, 25, 1);
-        esp_rom_delay_us(1000000);
         
         ++i;
     }

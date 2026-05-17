@@ -6,12 +6,11 @@
  */
 
 (() => {
-  const PTZ_REPEAT_MS = 150;
-  const FLASH_MS      = 80;
+  const THROTTLE_MS = 300;
+  const FLASH_MS    = 80;
 
-  let repeatTimer = null;
-  let activeBtn   = null;
-  let zoomLevel   = 1.0;   // mirrors server state for the badge
+  let lastSent  = 0;   // timestamp of last command
+  let zoomLevel = 1.0;
 
   /* ── badge ── */
 
@@ -45,6 +44,10 @@
   /* ── API call ── */
 
   async function sendPTZ(dir) {
+    const now = Date.now();
+    if (now - lastSent < THROTTLE_MS) return;
+    lastSent = now;
+
     try {
       const res  = await fetch('/api/ptz', {
         method:  'POST',
@@ -59,44 +62,22 @@
     } catch (_) {}
   }
 
-  /* ── hold-to-repeat ── */
-
-  function startRepeat(btn, dir) {
-    if (repeatTimer) return;
-    activeBtn = btn;
-    btn.classList.add('active');
-    sendPTZ(dir);
-    repeatTimer = setInterval(() => sendPTZ(dir), PTZ_REPEAT_MS);
-  }
-
-  function stopRepeat() {
-    if (!repeatTimer) return;
-    clearInterval(repeatTimer);
-    repeatTimer = null;
-    if (activeBtn) { activeBtn.classList.remove('active'); activeBtn = null; }
-  }
-
   /* ── wire buttons ── */
 
   function attachBtn(btn) {
     const dir = btn.dataset.dir;
     if (!dir) return;
 
-    if (dir === 'home') {
-      btn.addEventListener('click', async () => {
-        btn.classList.add('active');
-        await sendPTZ('home');
-        setTimeout(() => btn.classList.remove('active'), FLASH_MS * 2);
-      });
-      return;
-    }
+    btn.addEventListener('click', async () => {
+      btn.classList.add('active');
+      await sendPTZ(dir);
+      setTimeout(() => btn.classList.remove('active'), FLASH_MS * 2);
+    });
 
-    btn.addEventListener('mousedown',   (e) => { e.preventDefault(); startRepeat(btn, dir); });
-    btn.addEventListener('touchstart',  (e) => { e.preventDefault(); startRepeat(btn, dir); }, { passive: false });
-    btn.addEventListener('mouseleave',  stopRepeat);
-    btn.addEventListener('mouseup',     stopRepeat);
-    btn.addEventListener('touchend',    stopRepeat);
-    btn.addEventListener('touchcancel', stopRepeat);
+    btn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      btn.click();
+    }, { passive: false });
   }
 
   document.querySelectorAll('.dpad-btn, .zoom-btn').forEach(attachBtn);
@@ -128,14 +109,7 @@
     const dir = KEY_MAP[e.key];
     if (!dir) return;
     e.preventDefault();
-    if (dir === 'home') { sendPTZ('home'); return; }
-    const btn = document.querySelector(`.dpad-btn[data-dir="${dir}"], .zoom-btn[data-dir="${dir}"]`);
-    if (btn && !repeatTimer) startRepeat(btn, dir);
-  });
-
-  document.addEventListener('keyup', (e) => {
-    const dir = KEY_MAP[e.key];
-    if (dir && dir !== 'home') stopRepeat();
+    sendPTZ(dir);
   });
 
 })();

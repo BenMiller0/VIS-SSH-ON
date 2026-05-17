@@ -1,10 +1,5 @@
 """
-backend/api/api_ptz.py
-
-POST /api/ptz  —  adjust camera zoom level via picamera2 ScalerCrop.
-
-Pan/tilt (dir: up/down/left/right) is accepted and returns ok so the
-frontend doesn't error — wire those to a servo controller when ready.
+backend/api/routes_camera.py
 """
 
 from fastapi import APIRouter
@@ -13,11 +8,16 @@ from pydantic import BaseModel
 import backend.lifespan as state
 from backend.hardware.provider import IS_PI
 from backend.hardware.interface_camera import ZOOM_MIN, ZOOM_MAX
+from backend.hardware.camera import PITCH_MIN, PITCH_MAX, YAW_MIN, YAW_MAX, PITCH_HOME, YAW_HOME
 
 router = APIRouter()
 
-ZOOM_STEP   = 0.15                              # base increment per press
-SPEED_MULT  = {1: 0.5, 2: 0.75, 3: 1.0, 4: 1.5, 5: 2.0}
+ZOOM_STEP  = 0.15
+PITCH_STEP = 5
+YAW_STEP   = 5
+SPEED_MULT = {1: 0.5, 2: 0.75, 3: 1.0, 4: 1.5, 5: 2.0}
+
+VALID_DIRS = ("zoom-in", "zoom-out", "home", "stop", "up", "down", "left", "right")
 
 
 class PTZCommand(BaseModel):
@@ -27,23 +27,40 @@ class PTZCommand(BaseModel):
 
 @router.post("/api/ptz")
 async def ptz(cmd: PTZCommand):
-    # Pan/tilt — placeholder until servos are wired up
-    if cmd.dir not in ("zoom-in", "zoom-out", "home", "stop"):
-        return {"status": "ok", "zoom": round(state.camera._zoom_level, 2)}
+    if cmd.dir not in VALID_DIRS:
+        return {"status": "error", "msg": f"unknown direction: {cmd.dir}"}
 
-    # Zoom is a no-op on the mock camera (dev machine without picamera2)
     if not IS_PI:
         return {"status": "ok", "zoom": 1.0}
 
-    step        = ZOOM_STEP * SPEED_MULT.get(cmd.speed, 1.0)
-    current     = state.camera._zoom_level
+    mult = SPEED_MULT.get(cmd.speed, 1.0)
 
     if cmd.dir == "zoom-in":
-        new_zoom = min(ZOOM_MAX, current + step)
-    elif cmd.dir == "zoom-out":
-        new_zoom = max(ZOOM_MIN, current - step)
-    else:  # home / stop
-        new_zoom = 1.0
+        state.camera.set_zoom(min(ZOOM_MAX, state.camera._zoom_level + ZOOM_STEP * mult))
 
-    state.camera.set_zoom(new_zoom)
-    return {"status": "ok", "zoom": round(new_zoom, 2)}
+    elif cmd.dir == "zoom-out":
+        state.camera.set_zoom(max(ZOOM_MIN, state.camera._zoom_level - ZOOM_STEP * mult))
+
+    elif cmd.dir == "up":
+        state.camera.set_pitch(min(PITCH_MAX, state.camera._current_pitch + int(PITCH_STEP * mult)))
+
+    elif cmd.dir == "down":
+        state.camera.set_pitch(max(PITCH_MIN, state.camera._current_pitch - int(PITCH_STEP * mult)))
+
+    elif cmd.dir == "left":
+        state.camera.set_yaw(max(YAW_MIN, state.camera._current_yaw - int(YAW_STEP * mult)))
+
+    elif cmd.dir == "right":
+        state.camera.set_yaw(min(YAW_MAX, state.camera._current_yaw + int(YAW_STEP * mult)))
+
+    elif cmd.dir in ("home", "stop"):
+        state.camera.set_zoom(1.0)
+        state.camera.set_pitch(PITCH_HOME)
+        state.camera.set_yaw(YAW_HOME)
+
+    return {
+        "status": "ok",
+        "zoom":   round(state.camera._zoom_level, 2),
+        "pitch":  state.camera._current_pitch,
+        "yaw":    state.camera._current_yaw,
+    }

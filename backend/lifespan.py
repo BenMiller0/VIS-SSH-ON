@@ -56,6 +56,7 @@ def _capture_loop() -> None:
             # MockCamera (OpenCV) already outputs BGR — skip conversion.
             if IS_PI:
                 frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            frame = cv2.rotate(frame, cv2.ROTATE_180)
             _, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
             frame_bytes = buf.tobytes()
             with frame_lock:

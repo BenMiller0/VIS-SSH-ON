@@ -218,3 +218,7 @@ __marimo__/
 backend/artifacts/
 
 pigpio-master/
+
+.codex
+.agents
+.vscode

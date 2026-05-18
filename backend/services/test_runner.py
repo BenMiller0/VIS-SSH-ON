@@ -2,12 +2,15 @@
 backend/services/test_runner.py
 
 Runs tests in a background thread and streams structured status events.
-Sprint 3 adds a first computer-vision metric for robotic-arm direction plus
+Sprint 3 adds a first computer-vision metric for red-keypoint detection plus
 automatic failure replay artifacts built from the recent frame buffer.
 """
 
 import json
 import random
+import os
+import subprocess
+import sys
 import threading
 import time
 from collections.abc import Callable
@@ -24,9 +27,10 @@ from backend.database.database import (
     update_test_run,
 )
 from backend.hardware.provider import IS_PI
-from backend.services.cv_services import ArmDirectionTracker
+from backend.services.cv_services import RedBlobKeypointTracker
 
 ARTIFACT_ROOT = Path(__file__).resolve().parents[1] / "artifacts"
+CV_TEST_ROOT = Path(__file__).resolve().parents[1] / "cv_tests"
 
 
 def _to_bool(value: str | None, default: bool = False) -> bool:
@@ -47,10 +51,6 @@ def _to_float(value: str | None, default: float) -> float:
         return float(value) if value is not None else default
     except ValueError:
         return default
-
-
-def _opposite_direction(direction: str) -> str:
-    return "clockwise" if direction == "counterclockwise" else "counterclockwise"
 
 
 def _read_real_metrics(prev_pixels: list[float] | None) -> tuple[float, bool, list[float]]:
@@ -82,6 +82,61 @@ def _latest_frame_bytes() -> bytes | None:
 
     with state.frame_lock:
         return state.latest_frame
+
+
+def _safe_cv_script_path(file_path: str | None) -> Path | None:
+    if not file_path:
+        return None
+    candidate = (CV_TEST_ROOT / file_path).resolve()
+    root = CV_TEST_ROOT.resolve()
+    if root not in candidate.parents and candidate != root:
+        return None
+    if candidate.suffix != ".py" or not candidate.is_file():
+        return None
+    return candidate
+
+
+def _run_cv_script(script_path: str, payload: dict[str, Any]) -> dict[str, Any]:
+    safe = _safe_cv_script_path(script_path)
+    if safe is None:
+        return {
+            "ok": False,
+            "returncode": 1,
+            "stdout": "",
+            "stderr": f"Invalid CV test script: {script_path}",
+        }
+
+    raw_payload = json.dumps(payload)
+    env = {
+        **os.environ,
+        "CV_KEYPOINT_JSON": json.dumps(payload.get("keypoint", {})),
+        "CV_TEST_JSON": raw_payload,
+    }
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(safe)],
+            input=raw_payload,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            cwd=str(CV_TEST_ROOT),
+            env=env,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return {
+            "ok": False,
+            "returncode": 124,
+            "stdout": "",
+            "stderr": "CV test timed out",
+        }
+
+    return {
+        "ok": proc.returncode == 0,
+        "returncode": proc.returncode,
+        "stdout": proc.stdout,
+        "stderr": proc.stderr,
+    }
 
 
 def _recent_history(seconds: int) -> tuple[list[dict], list[dict]]:
@@ -177,7 +232,7 @@ def run_test(
     params = get_test_parameters(test_config_id)
     config = get_config_by_id(test_config_id)
     config_type = config["type"] if config else "custom"
-    metric_name = params.get("metric") or ("arm_direction" if config_type == "vision" else config_type)
+    metric_name = params.get("metric") or ("red_keypoint" if config_type == "vision" else config_type)
 
     broadcast({"type": "start", "run_id": run_id, "config_id": test_config_id})
     insert_event(run_id, "start", "Test started", json.dumps({"config_id": test_config_id, "duration": duration}))
@@ -187,24 +242,23 @@ def run_test(
 
     max_temp = _to_int(params.get("max_temp"), 75)
     require_pixel_change = _to_bool(params.get("require_pixel_change"), True)
-    expected_direction = params.get("expected_direction", "counterclockwise")
-    confidence_threshold = _to_float(params.get("confidence_threshold"), 0.75)
     require_detection = _to_bool(params.get("require_detection"), True)
     post_failure_seconds = _to_int(params.get("post_failure_seconds"), 2)
+    script_path = params.get("script_path")
 
-    tracker = ArmDirectionTracker(
-        roi=params.get("roi"),
-        min_angle_delta_deg=_to_float(params.get("min_angle_delta_deg"), 8.0),
-    )
+    tracker = RedBlobKeypointTracker(roi=params.get("roi"))
 
     status = "pass"
     failure_reason: str | None = None
     failure_payload: dict[str, Any] | None = None
     replay_artifact: dict[str, Any] | None = None
+    script_result: dict[str, Any] | None = None
     temperature = 0.0
     pixel_change = False
     prev_pixels: list[float] | None = None
-    last_direction = "unknown"
+    keypoint_detected = False
+    latest_keypoint: dict[str, Any] = {}
+    cv_history: list[dict[str, Any]] = []
     started_at = time.monotonic()
 
     try:
@@ -221,40 +275,24 @@ def run_test(
                 "elapsed_seconds": round(time.monotonic() - started_at, 2),
             }
 
-            if metric_name == "arm_direction":
+            if metric_name in {"red_keypoint", "arm_direction"}:
                 cv_payload = tracker.update(_latest_frame_bytes())
-
-                # Local development machines usually do not have the arm and marker.
-                # Simulate a clear opposite-direction observation so the Sprint 3 UI
-                # can be exercised without the physical rig.
-                if not IS_PI and cv_payload["observed_direction"] == "unknown" and metric_payload["elapsed_seconds"] >= 2:
-                    observed = params.get("mock_observed_direction") or _opposite_direction(expected_direction)
-                    cv_payload = {
-                        "observed_direction": observed,
-                        "angle_delta_deg": -18.0 if observed == "clockwise" else 18.0,
-                        "confidence": 0.92,
-                        "note": "Mock arm-direction observation.",
-                    }
-
-                last_direction = cv_payload.get("observed_direction", "unknown")
-                metric_payload.update({
-                    "expected_direction": expected_direction,
+                keypoint_detected = bool(cv_payload.get("detected"))
+                latest_keypoint = cv_payload
+                cv_history.append({
                     **cv_payload,
+                    "elapsed_seconds": metric_payload["elapsed_seconds"],
+                    "timestamp": datetime.now().isoformat(timespec="milliseconds"),
                 })
-
-                confident = metric_payload.get("confidence", 0.0) >= confidence_threshold
-                observed = metric_payload.get("observed_direction")
-                if confident and observed in {"clockwise", "counterclockwise"} and observed != expected_direction:
-                    status = "fail"
-                    failure_reason = f"arm rotated {observed}; expected {expected_direction}"
-                    failure_payload = {
-                        "metric": "arm_direction",
-                        "expected": expected_direction,
-                        "observed": observed,
-                        "confidence": metric_payload.get("confidence"),
-                        "angle_delta_deg": metric_payload.get("angle_delta_deg"),
-                        "timestamp": datetime.now().isoformat(timespec="milliseconds"),
-                        "note": failure_reason,
+                metric_payload.update(cv_payload)
+                if script_path:
+                    script_result = _run_cv_script(script_path, {
+                        "keypoint": latest_keypoint,
+                        "history": cv_history,
+                    })
+                    metric_payload["script_result"] = {
+                        "script": script_path,
+                        **script_result,
                     }
 
             if metric_name == "thermal" and temperature > max_temp:
@@ -281,18 +319,39 @@ def run_test(
             failure_reason = None
             failure_payload = None
         elif status != "fail":
-            if metric_name == "arm_direction" and require_detection and last_direction == "unknown":
+            if script_path and metric_name in {"red_keypoint", "arm_direction"}:
+                script_result = _run_cv_script(script_path, {
+                    "keypoint": latest_keypoint,
+                    "history": cv_history,
+                })
+                insert_result(run_id, "cv_script", json.dumps({
+                    "script": script_path,
+                    **script_result,
+                }))
+                if not script_result["ok"]:
+                    status = "fail"
+                    detail = (script_result.get("stdout") or script_result.get("stderr") or "").strip()
+                    failure_reason = detail or f"{script_path} failed"
+                    failure_payload = {
+                        "metric": "cv_script",
+                        "script": script_path,
+                        "returncode": script_result.get("returncode"),
+                        "stdout": script_result.get("stdout"),
+                        "stderr": script_result.get("stderr"),
+                        "timestamp": datetime.now().isoformat(timespec="milliseconds"),
+                        "note": failure_reason,
+                    }
+            elif metric_name in {"red_keypoint", "arm_direction"} and require_detection and not keypoint_detected:
                 status = "fail"
-                failure_reason = "arm direction was not confidently detected"
+                failure_reason = "red blob keypoint was not detected"
                 failure_payload = {
-                    "metric": "arm_direction",
-                    "expected": expected_direction,
-                    "observed": "unknown",
-                    "confidence": 0.0,
+                    "metric": "red_keypoint",
+                    "expected": "detected",
+                    "observed": "not detected",
                     "timestamp": datetime.now().isoformat(timespec="milliseconds"),
                     "note": failure_reason,
                 }
-            elif require_pixel_change and metric_name not in {"arm_direction", "custom"} and not pixel_change:
+            elif require_pixel_change and metric_name not in {"red_keypoint", "arm_direction", "custom"} and not pixel_change:
                 status = "fail"
                 failure_reason = "pixel did not change"
                 failure_payload = {
@@ -327,7 +386,7 @@ def run_test(
 
         thresholds = {}
         if config_type == "vision":
-            thresholds["confidence_threshold"] = confidence_threshold
+            thresholds["require_detection"] = require_detection
         elif config_type == "thermal":
             thresholds["max_temp"] = max_temp
         # For custom, no thresholds
@@ -339,6 +398,10 @@ def run_test(
             "failure_reason": failure_reason,
             "failure": failure_payload,
             "artifact": replay_artifact,
+            "script_result": {
+                "script": script_path,
+                **script_result,
+            } if script_result is not None else None,
             "thresholds": thresholds,
         })
 

@@ -7,9 +7,11 @@ from backend.api.routes_tests import router as tests_router
 from backend.api.routes_configs import router as configs_router
 from backend.api.routes_files import router as files_router
 from backend.api.routes_flash import router as flash_router
+from backend.api.routes_cv_tests import router as cv_tests_router
 from backend.websockets.ws_camera import router as ws_camera_router
 from backend.websockets.ws_thermal import router as ws_thermal_router
 from backend.websockets.ws_test import router as ws_test_router
+from backend.websockets.ws_keypoint import router as ws_keypoint_router
 from backend.api.routes_camera import router as routes_camera
 from backend.websockets.ws_serial import router as ws_serial_router
 
@@ -25,9 +27,11 @@ app.include_router(tests_router)
 app.include_router(configs_router)
 app.include_router(files_router)
 app.include_router(flash_router)
+app.include_router(cv_tests_router)
 app.include_router(ws_camera_router)
 app.include_router(ws_thermal_router)
 app.include_router(ws_test_router)
+app.include_router(ws_keypoint_router)
 app.include_router(routes_camera)
 app.include_router(ws_serial_router)
 

@@ -35,10 +35,9 @@
                     <div id="config-type-required" class="type-notice">Select a test type to reveal settings.</div>
                     <div id="config-type-fields">
                         <div id="vision-fields" class="form-grid field-hidden">
-                            <label>Expected Direction
-                                <select id="config-expected-direction">
-                                    <option value="counterclockwise">Counterclockwise</option>
-                                    <option value="clockwise">Clockwise</option>
+                            <label>Attached Python Test
+                                <select id="config-script-path">
+                                    <option value="rotation_test.py">rotation_test.py</option>
                                 </select>
                             </label>
                         </div>
@@ -56,5 +55,22 @@
                     </div>
                     <div id="config-save-status" class="inline-status"></div>
                 </form>
+            </div>
+
+            <div class="cv-script-panel">
+                <div class="section-header compact">
+                    <div>
+                        <span class="section-kicker">CV Test Files</span>
+                        <h2>Python Editor</h2>
+                    </div>
+                    <div class="section-actions">
+                        <select id="cv-script-select" class="script-select"></select>
+                        <input id="new-cv-script-name" class="script-name-input" type="text" placeholder="new_test.py" />
+                        <button id="new-cv-script-btn" class="action-btn" type="button">NEW FILE</button>
+                        <button id="save-cv-script-btn" class="action-btn" type="button">SAVE SCRIPT</button>
+                    </div>
+                </div>
+                <textarea id="cv-script-editor" class="cv-script-editor" spellcheck="false"></textarea>
+
             </div>
         </section>

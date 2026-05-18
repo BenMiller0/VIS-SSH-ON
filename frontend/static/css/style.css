@@ -892,10 +892,135 @@ main .run-layout .viewport {
 
 .vision-overlay {
   position: absolute;
-  inset: 18px;
-  border: 1px dashed rgba(255,224,102,.55);
+  inset: 0;
   pointer-events: none;
   z-index: 5;
+}
+
+.vision-overlay::before,
+.vision-overlay::after {
+  content: '';
+  position: absolute;
+  left: var(--keypoint-x, 50%);
+  top: var(--keypoint-y, 50%);
+  transform: translate(-50%, -50%);
+}
+
+.vision-overlay::before {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--red);
+  border-radius: 50%;
+  box-shadow: 0 0 12px rgba(255,59,59,.65);
+}
+
+.vision-overlay::after {
+  width: 34px;
+  height: 1px;
+  background: var(--red);
+  box-shadow: 0 0 8px rgba(255,59,59,.45);
+}
+
+[data-keypoint-coords].missing {
+  color: var(--yellow);
+}
+
+.cv-script-panel {
+  border: 1px solid var(--border);
+  background: rgba(5, 15, 8, .84);
+  min-width: 0;
+}
+
+.section-header.compact {
+  padding: 14px 16px;
+}
+
+.script-select {
+  min-width: 190px;
+  background: #0a160d;
+  border: 1px solid var(--border-bright);
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 8px 10px;
+  outline: none;
+}
+
+.script-name-input {
+  width: 160px;
+  background: #0a160d;
+  border: 1px solid var(--border-bright);
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 8px 10px;
+  outline: none;
+}
+
+.script-name-input::placeholder {
+  color: rgba(0,255,136,.35);
+}
+
+.cv-script-editor {
+  display: block;
+  width: 100%;
+  min-height: 300px;
+  resize: vertical;
+  background: #050805;
+  border: 0;
+  border-top: 1px solid var(--border);
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.55;
+  padding: 14px 16px;
+  outline: none;
+}
+
+.cv-script-panel .CodeMirror {
+  height: 360px;
+  border-top: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.cv-script-panel .CodeMirror-gutters {
+  border-right: 1px solid var(--border);
+}
+
+.cv-script-output {
+  min-height: 96px;
+  max-height: 240px;
+  overflow: auto;
+  border-top: 1px solid var(--border);
+  background: #020603;
+  color: rgba(0,255,136,.82);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 12px 16px;
+  white-space: pre-wrap;
+}
+
+.terminal-shell {
+  display: grid;
+  gap: 8px;
+}
+
+.terminal-shell pre,
+[data-test-terminal] {
+  min-height: 150px;
+  max-height: 260px;
+  overflow: auto;
+  background: #020603;
+  border: 1px solid var(--border);
+  color: rgba(0,255,136,.84);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.45;
+  padding: 10px;
+  white-space: pre-wrap;
 }
 
 .config-list {

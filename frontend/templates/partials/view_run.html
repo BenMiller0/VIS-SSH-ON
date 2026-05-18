@@ -19,8 +19,8 @@
                 <aside class="side-panel">
                     <div class="panel-heading">Execution</div>
                     <div class="status-stack">
-                        <span class="label">Expected</span>
-                        <strong id="run-expected-direction">-</strong>
+                        <span class="label">Red Keypoint</span>
+                        <strong data-keypoint-coords>Not detected</strong>
                     </div>
                     <label>Duration (seconds)
                         <input id="run-duration" type="number" min="0" value="10" />
@@ -34,6 +34,11 @@
                         <strong data-test-status>IDLE</strong>
                     </div>
                     <div id="run-metrics" data-test-metrics class="metrics-block"></div>
+                    <div class="terminal-shell">
+                        <span class="label">Test Output</span>
+                        <pre id="run-terminal" data-test-terminal>Idle.</pre>
+                    </div>
                 </aside>
             </div>
+
         </section>

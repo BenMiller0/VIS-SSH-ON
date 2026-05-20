@@ -1,21 +1,11 @@
-"""Print the current red keypoint coordinates."""
+"""Require the current red keypoint to be visible."""
 
-from vis_ssh_on import fail, load_payload, pass_test
+import vis_ssh_on as vis
 
 
 def main() -> None:
-    payload = load_payload()
-    keypoint = payload.get("keypoint", {})
-    if not keypoint.get("detected"):
-        print("red keypoint not detected")
-        fail("red keypoint not detected")
-
-    print(f"x={keypoint['x']} y={keypoint['y']} area={keypoint.get('area')}")
-    pass_test(
-        x=keypoint["x"],
-        y=keypoint["y"],
-        area=keypoint.get("area"),
-    )
+    red = vis.keypoint("red").should_be_visible()
+    vis.pass_test(x=red.x, y=red.y, area=red.area)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-"""Streams the latest red blob keypoint over /ws/keypoint."""
+"""Streams the latest colored blob keypoints over /ws/keypoint."""
 
 import asyncio
 import json
@@ -7,7 +7,7 @@ from datetime import datetime
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 import backend.lifespan as state
-from backend.services.cv_services import detect_red_keypoint
+from backend.services.cv_services import detect_keypoints
 
 router = APIRouter()
 
@@ -19,7 +19,11 @@ async def ws_keypoint(websocket: WebSocket) -> None:
         while not state.shutdown_event.is_set():
             with state.frame_lock:
                 frame = state.latest_frame
-            payload = detect_red_keypoint(frame)
+            keypoints = detect_keypoints(frame)
+            payload = keypoints["red"]
+            if not payload.get("detected") and keypoints["green"].get("detected"):
+                payload = keypoints["green"]
+            payload["keypoints"] = keypoints
             payload["type"] = "keypoint"
             payload["timestamp"] = datetime.now().isoformat(timespec="milliseconds")
             await websocket.send_text(json.dumps(payload))

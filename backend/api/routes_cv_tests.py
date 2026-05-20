@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 import backend.lifespan as state
-from backend.services.cv_services import detect_red_keypoint
+from backend.services.cv_services import detect_keypoints
 
 router = APIRouter(prefix="/api/cv-tests", tags=["cv-tests"])
 
@@ -37,7 +37,8 @@ def _safe_path(file_path: str) -> Path | None:
 def _latest_payload(history_seconds: float = 3.0) -> dict:
     with state.frame_lock:
         frame = state.latest_frame
-    latest = detect_red_keypoint(frame)
+    keypoints = detect_keypoints(frame)
+    latest = keypoints["red"]
 
     cutoff = time.time() - history_seconds
     samples = []
@@ -45,13 +46,16 @@ def _latest_payload(history_seconds: float = 3.0) -> dict:
         frames = [dict(item) for item in state.frame_history if item["time"] >= cutoff]
 
     for item in frames:
-        keypoint = detect_red_keypoint(item["jpeg"])
+        sample_keypoints = detect_keypoints(item["jpeg"])
+        keypoint = sample_keypoints["red"]
+        keypoint["keypoints"] = sample_keypoints
         keypoint["timestamp"] = item["timestamp"]
         keypoint["time"] = item["time"]
         samples.append(keypoint)
 
     return {
         "keypoint": latest,
+        "keypoints": keypoints,
         "history": samples,
     }
 
@@ -91,6 +95,7 @@ def run_cv_test(file_path: str):
     env = {
         **os.environ,
         "CV_KEYPOINT_JSON": json.dumps(payload_data["keypoint"]),
+        "CV_KEYPOINTS_JSON": json.dumps(payload_data["keypoints"]),
         "CV_TEST_JSON": payload,
     }
 

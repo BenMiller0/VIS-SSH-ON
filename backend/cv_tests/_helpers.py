@@ -1,8 +1,9 @@
 """Helpers for editable CV tests.
 
 The UI runner sends:
-  - keypoint: the latest red blob keypoint
-  - history: recent red blob keypoints from prior camera frames
+  - keypoint: the latest selected color blob keypoint
+  - keypoints: latest built-in color keypoints, keyed by name
+  - history: recent selected keypoints from prior camera frames
 
 Tests can stay small by importing these helpers.
 """
@@ -33,13 +34,14 @@ def detected_points(payload: dict) -> list[dict]:
 def require_keypoint(payload: dict) -> dict:
     keypoint = payload.get("keypoint", {})
     if not keypoint.get("detected"):
-        fail("red blob not detected")
+        color = keypoint.get("color") or keypoint.get("name") or "selected"
+        fail(f"{color} blob not detected")
     return keypoint
 
 
 def rotation_direction(points: list[dict]) -> str:
     if len(points) < 2:
-        fail("need at least two detected red blob samples")
+        fail("need at least two detected blob samples")
 
     width = next((p.get("frame_width") for p in points if p.get("frame_width")), None)
     height = next((p.get("frame_height") for p in points if p.get("frame_height")), None)
@@ -62,7 +64,7 @@ def rotation_direction(points: list[dict]) -> str:
         previous = current
 
     if abs(math.degrees(total_delta)) < 8:
-        fail("red blob did not rotate enough")
+        fail("blob did not rotate enough")
 
     return "clockwise" if total_delta > 0 else "counterclockwise"
 

@@ -97,6 +97,42 @@ function renderScriptOutput(result) {
     appendTestTerminalOutput([stdout, stderr].filter(Boolean).join('\n'));
 }
 
+function keypointNameFromMetric(metric) {
+    const value = String(metric ?? '');
+    return value.endsWith('_keypoint') ? value.replace(/_keypoint$/, '') : '';
+}
+
+function inferScriptKeypointColor() {
+    const source = getCvEditorValue?.() || '';
+    const match = source.match(/(?:vis\.)?keypoint\(\s*["']([a-zA-Z0-9_-]+)["']\s*\)/);
+    return match?.[1]?.toLowerCase() || '';
+}
+
+function preferredKeypointName() {
+    const params = selectedConfig?.parameters ?? {};
+    return (
+        params.keypoint_color ||
+        params.color ||
+        keypointNameFromMetric(params.metric) ||
+        inferScriptKeypointColor() ||
+        'red'
+    ).toLowerCase();
+}
+
+function pickKeypoint(data, preferred = preferredKeypointName()) {
+    const keypoints = data?.keypoints ?? {};
+    if (keypoints[preferred]) return keypoints[preferred];
+    if (data?.name === preferred || data?.color === preferred) return data;
+    if (preferred === 'red' && data && !data.keypoints) return data;
+    const detected = Object.values(keypoints).find(point => point?.detected);
+    return detected || data || {};
+}
+
+function formatKeypointLabel(name) {
+    const pretty = name ? `${name.charAt(0).toUpperCase()}${name.slice(1)}` : 'Selected';
+    return `${pretty} Keypoint`;
+}
+
 function updateSelectedConfigSummary() {
     const name = selectedConfig?.name ?? 'No test selected';
     const params = selectedConfig?.parameters ?? {};
@@ -141,15 +177,17 @@ function renderTest(data) {
             metricRows.push(`<div class="metric-line"><span>Temp</span><strong>${escapeHtml(data.temperature)} deg C</strong></div>`);
         }
         if (testType === 'vision') {
-            if (data.detected !== undefined) {
+            const point = pickKeypoint(data);
+            const label = formatKeypointLabel(point.name || point.color || preferredKeypointName());
+            if (point.detected !== undefined) {
                 metricRows.push(
-                    `<div class="metric-line"><span>Detected</span><strong>${data.detected ? 'yes' : 'no'}</strong></div>`,
-                    `<div class="metric-line"><span>X</span><strong>${escapeHtml(data.x ?? '-')}</strong></div>`,
-                    `<div class="metric-line"><span>Y</span><strong>${escapeHtml(data.y ?? '-')}</strong></div>`
+                    `<div class="metric-line"><span>${escapeHtml(label)}</span><strong>${point.detected ? 'detected' : 'missing'}</strong></div>`,
+                    `<div class="metric-line"><span>X</span><strong>${escapeHtml(point.x ?? '-')}</strong></div>`,
+                    `<div class="metric-line"><span>Y</span><strong>${escapeHtml(point.y ?? '-')}</strong></div>`
                 );
             }
-            if (data.area !== undefined) {
-                metricRows.push(`<div class="metric-line"><span>Area</span><strong>${escapeHtml(data.area)}</strong></div>`);
+            if (point.area !== undefined) {
+                metricRows.push(`<div class="metric-line"><span>Area</span><strong>${escapeHtml(point.area)}</strong></div>`);
             }
         }
         // For custom, no metrics during execution
@@ -299,24 +337,30 @@ function connectCamera() {
 }
 
 function renderKeypoint(data) {
-    const text = data.detected
-        ? `x ${data.x}, y ${data.y}`
+    const point = pickKeypoint(data);
+    const name = point.name || point.color || preferredKeypointName();
+    const text = point.detected
+        ? `x ${point.x}, y ${point.y}`
         : 'Not detected';
+
+    $$('[data-keypoint-label]').forEach(el => {
+        el.textContent = formatKeypointLabel(name);
+    });
 
     $$('[data-keypoint-coords]').forEach(el => {
         el.textContent = text;
-        el.classList.toggle('missing', !data.detected);
+        el.classList.toggle('missing', !point.detected);
     });
 
     $$('.vision-overlay').forEach(overlay => {
         const viewport = overlay.closest('.viewport');
-        if (!viewport || !data.detected || !data.frame_width || !data.frame_height) {
+        if (!viewport || !point.detected || !point.frame_width || !point.frame_height) {
             overlay.hidden = true;
             return;
         }
         overlay.hidden = false;
-        const left = (data.x / data.frame_width) * 100;
-        const top = (data.y / data.frame_height) * 100;
+        const left = (point.x / point.frame_width) * 100;
+        const top = (point.y / point.frame_height) * 100;
         overlay.style.setProperty('--keypoint-x', `${left}%`);
         overlay.style.setProperty('--keypoint-y', `${top}%`);
     });
@@ -376,7 +420,9 @@ function collectConfigForm() {
     const params = {};
 
     if (type === 'vision') {
-        params.metric = 'red_keypoint';
+        const color = inferScriptKeypointColor() || 'red';
+        params.metric = `${color}_keypoint`;
+        params.keypoint_color = color;
         params.require_detection = 'true';
         params.script_path = $('#config-script-path')?.value || currentCvScript;
         params.include_thermal = 'false';
@@ -418,23 +464,18 @@ function normalizeCvScriptName(raw) {
 
 function defaultCvScriptContent(name) {
     const testName = name.replace(/\.py$/i, '').replace(/[^a-zA-Z0-9_]/g, '_') || 'custom_test';
-    return `"""${testName} for the red blob keypoint."""
+    return `"""${testName} for a colored blob keypoint."""
 
-from vis_ssh_on import fail, load_payload, pass_test, require_keypoint
+import vis_ssh_on as vis
 
 
 def main() -> None:
-    payload = load_payload()
-    keypoint = require_keypoint(payload)
+    point = vis.keypoint("green").should_be_visible(min_area=10)
 
-    # Edit the assertions below for your experiment.
-    if keypoint.get("area", 0) < 10:
-        fail("red blob is too small", area=keypoint.get("area"))
-
-    pass_test(
-        x=keypoint["x"],
-        y=keypoint["y"],
-        area=keypoint.get("area"),
+    vis.pass_test(
+        x=point.x,
+        y=point.y,
+        area=point.area,
     )
 
 

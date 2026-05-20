@@ -2,13 +2,14 @@
 backend/services/test_runner.py
 
 Runs tests in a background thread and streams structured status events.
-Sprint 3 adds a first computer-vision metric for red-keypoint detection plus
+Sprint 3 adds computer-vision keypoint detection plus
 automatic failure replay artifacts built from the recent frame buffer.
 """
 
 import json
 import random
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -27,7 +28,7 @@ from backend.database.database import (
     update_test_run,
 )
 from backend.hardware.provider import IS_PI
-from backend.services.cv_services import RedBlobKeypointTracker
+from backend.services.cv_services import ColorBlobKeypointTracker, detect_keypoints
 
 ARTIFACT_ROOT = Path(__file__).resolve().parents[1] / "artifacts"
 CV_TEST_ROOT = Path(__file__).resolve().parents[1] / "cv_tests"
@@ -110,6 +111,7 @@ def _run_cv_script(script_path: str, payload: dict[str, Any]) -> dict[str, Any]:
     env = {
         **os.environ,
         "CV_KEYPOINT_JSON": json.dumps(payload.get("keypoint", {})),
+        "CV_KEYPOINTS_JSON": json.dumps(payload.get("keypoints", {})),
         "CV_TEST_JSON": raw_payload,
     }
     try:
@@ -220,6 +222,38 @@ def _record_metric(run_id: int, payload: dict[str, Any]) -> None:
             insert_result(run_id, key, str(value))
 
 
+def _script_keypoint_color(script_path: str | None) -> str | None:
+    safe = _safe_cv_script_path(script_path)
+    if safe is None:
+        return None
+    match = re.search(r"(?:vis\.)?keypoint\(\s*[\"']([a-zA-Z0-9_-]+)[\"']\s*\)", safe.read_text(encoding="utf-8"))
+    return match.group(1).lower() if match else None
+
+
+def _keypoint_color(params: dict[str, str], metric_name: str) -> str:
+    color = params.get("keypoint_color") or params.get("color")
+    if color:
+        return color.strip().lower()
+    script_color = _script_keypoint_color(params.get("script_path"))
+    if script_color:
+        return script_color
+    if metric_name.endswith("_keypoint"):
+        return metric_name.removesuffix("_keypoint").strip().lower() or "red"
+    return "red"
+
+
+def _is_keypoint_metric(metric_name: str) -> bool:
+    return metric_name in {"red_keypoint", "green_keypoint", "arm_direction"} or metric_name.endswith("_keypoint")
+
+
+def _cv_script_payload(latest_keypoint: dict[str, Any], cv_history: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "keypoint": latest_keypoint,
+        "keypoints": latest_keypoint.get("keypoints", {}),
+        "history": cv_history,
+    }
+
+
 def run_test(
     run_id: int,
     test_config_id: int,
@@ -245,8 +279,9 @@ def run_test(
     require_detection = _to_bool(params.get("require_detection"), True)
     post_failure_seconds = _to_int(params.get("post_failure_seconds"), 2)
     script_path = params.get("script_path")
+    keypoint_color = _keypoint_color(params, metric_name)
 
-    tracker = RedBlobKeypointTracker(roi=params.get("roi"))
+    tracker = ColorBlobKeypointTracker(color=keypoint_color, roi=params.get("roi"))
 
     status = "pass"
     failure_reason: str | None = None
@@ -275,8 +310,11 @@ def run_test(
                 "elapsed_seconds": round(time.monotonic() - started_at, 2),
             }
 
-            if metric_name in {"red_keypoint", "arm_direction"}:
-                cv_payload = tracker.update(_latest_frame_bytes())
+            if _is_keypoint_metric(metric_name):
+                frame = _latest_frame_bytes()
+                keypoints = detect_keypoints(frame, roi=params.get("roi"))
+                cv_payload = tracker.update(frame)
+                cv_payload["keypoints"] = keypoints
                 keypoint_detected = bool(cv_payload.get("detected"))
                 latest_keypoint = cv_payload
                 cv_history.append({
@@ -286,10 +324,7 @@ def run_test(
                 })
                 metric_payload.update(cv_payload)
                 if script_path:
-                    script_result = _run_cv_script(script_path, {
-                        "keypoint": latest_keypoint,
-                        "history": cv_history,
-                    })
+                    script_result = _run_cv_script(script_path, _cv_script_payload(latest_keypoint, cv_history))
                     metric_payload["script_result"] = {
                         "script": script_path,
                         **script_result,
@@ -319,11 +354,8 @@ def run_test(
             failure_reason = None
             failure_payload = None
         elif status != "fail":
-            if script_path and metric_name in {"red_keypoint", "arm_direction"}:
-                script_result = _run_cv_script(script_path, {
-                    "keypoint": latest_keypoint,
-                    "history": cv_history,
-                })
+            if script_path and _is_keypoint_metric(metric_name):
+                script_result = _run_cv_script(script_path, _cv_script_payload(latest_keypoint, cv_history))
                 insert_result(run_id, "cv_script", json.dumps({
                     "script": script_path,
                     **script_result,
@@ -341,17 +373,17 @@ def run_test(
                         "timestamp": datetime.now().isoformat(timespec="milliseconds"),
                         "note": failure_reason,
                     }
-            elif metric_name in {"red_keypoint", "arm_direction"} and require_detection and not keypoint_detected:
+            elif _is_keypoint_metric(metric_name) and require_detection and not keypoint_detected:
                 status = "fail"
-                failure_reason = "red blob keypoint was not detected"
+                failure_reason = f"{keypoint_color} blob keypoint was not detected"
                 failure_payload = {
-                    "metric": "red_keypoint",
+                    "metric": f"{keypoint_color}_keypoint",
                     "expected": "detected",
                     "observed": "not detected",
                     "timestamp": datetime.now().isoformat(timespec="milliseconds"),
                     "note": failure_reason,
                 }
-            elif require_pixel_change and metric_name not in {"red_keypoint", "arm_direction", "custom"} and not pixel_change:
+            elif require_pixel_change and not _is_keypoint_metric(metric_name) and metric_name != "custom" and not pixel_change:
                 status = "fail"
                 failure_reason = "pixel did not change"
                 failure_payload = {

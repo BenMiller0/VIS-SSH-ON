@@ -65,6 +65,32 @@ Browse, create, edit, and delete files under `embedded_software/` without leavin
 - Pass/fail status and failure reason shown in the footer panel
 - All runs persisted to SQLite for later review
 
+### Writable CV tests
+Editable camera tests live in `backend/cv_tests/`. Each script can import the
+small VIS-SSH-ON test API and declare keypoints directly:
+
+```python
+import vis_ssh_on as vis
+
+green = vis.keypoint("green").should_be_visible(min_area=20)
+green.should_rotate("clockwise")
+
+vis.pass_test(x=green.x, y=green.y, area=green.area)
+```
+
+The current detector provides built-in `red` and `green` keypoints. The same API
+also supports named keypoints from payloads shaped like
+`{"keypoints": {"tip": ...}}`, so tests can compare points naturally:
+
+```python
+scene = vis.scene()
+tip = scene.keypoint("tip").should_be_visible()
+base = scene.keypoint("base").should_be_visible()
+
+tip.should_be_above(base, by_at_least=10)
+tip.should_be_near(base, within=80)
+```
+
 ---
 
 ## Uploading firmware manually (SSH)

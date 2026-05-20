@@ -23,6 +23,16 @@ const replayState = {
 };
 
 const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+const THERMAL_GRID_SIZE = 8;
+const HEATMAP_CANVAS_SIZE = 96;
+const THERMAL_PIXEL_SMOOTHING = 0.28;
+const THERMAL_RANGE_SMOOTHING = 0.18;
+const thermalRenderState = {
+    pixels: null,
+    minTemp: null,
+    maxTemp: null,
+    lowResCanvas: null,
+};
 
 const $ = selector => document.querySelector(selector);
 const $$ = selector => Array.from(document.querySelectorAll(selector));
@@ -296,28 +306,122 @@ function connectTest() {
     };
 }
 
-function drawHeatmap(canvas, pixels) {
-    const ctx = canvas.getContext('2d');
-    const cellSize = canvas.width / 8;
-    const minTemp = Math.min(...pixels);
-    const maxTemp = Math.max(...pixels);
-    const range = maxTemp - minTemp || 1;
+function lerp(start, end, amount) {
+    return start + (end - start) * amount;
+}
 
-    for (let row = 0; row < 8; row++) {
-        for (let col = 0; col < 8; col++) {
-            const temp = pixels[row * 8 + col];
-            const norm = (temp - minTemp) / range;
-            const r = Math.floor(255 * Math.min(1, norm * 2));
-            const g = Math.floor(255 * Math.max(0, (norm - 0.5) * 2));
-            const b = Math.floor(255 * (1 - norm));
-            ctx.fillStyle = `rgb(${r},${g},${b})`;
-            ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+function colorForHeat(norm) {
+    const clamped = Math.max(0, Math.min(1, norm));
+    const r = Math.floor(255 * Math.min(1, clamped * 2));
+    const g = Math.floor(255 * Math.max(0, (clamped - 0.5) * 2));
+    const b = Math.floor(255 * (1 - clamped));
+    return `rgb(${r},${g},${b})`;
+}
+
+function smoothThermalPixels(pixels) {
+    if (!thermalRenderState.pixels || thermalRenderState.pixels.length !== pixels.length) {
+        thermalRenderState.pixels = pixels.slice();
+        return thermalRenderState.pixels;
+    }
+
+    for (let index = 0; index < pixels.length; index++) {
+        thermalRenderState.pixels[index] = lerp(
+            thermalRenderState.pixels[index],
+            pixels[index],
+            THERMAL_PIXEL_SMOOTHING
+        );
+    }
+
+    return thermalRenderState.pixels;
+}
+
+function blurThermalPixels(pixels) {
+    const blurred = new Array(pixels.length);
+    for (let row = 0; row < THERMAL_GRID_SIZE; row++) {
+        for (let col = 0; col < THERMAL_GRID_SIZE; col++) {
+            let total = 0;
+            let weightTotal = 0;
+
+            for (let y = -1; y <= 1; y++) {
+                for (let x = -1; x <= 1; x++) {
+                    const sampleRow = row + y;
+                    const sampleCol = col + x;
+                    if (sampleRow < 0 || sampleRow >= THERMAL_GRID_SIZE || sampleCol < 0 || sampleCol >= THERMAL_GRID_SIZE) {
+                        continue;
+                    }
+
+                    const weight = x === 0 && y === 0 ? 4 : 1;
+                    total += pixels[sampleRow * THERMAL_GRID_SIZE + sampleCol] * weight;
+                    weightTotal += weight;
+                }
+            }
+
+            blurred[row * THERMAL_GRID_SIZE + col] = total / weightTotal;
         }
     }
+    return blurred;
+}
+
+function thermalRangeFor(pixels) {
+    const minTemp = Math.min(...pixels);
+    const maxTemp = Math.max(...pixels);
+
+    if (thermalRenderState.minTemp === null || thermalRenderState.maxTemp === null) {
+        thermalRenderState.minTemp = minTemp;
+        thermalRenderState.maxTemp = maxTemp;
+    } else {
+        thermalRenderState.minTemp = lerp(thermalRenderState.minTemp, minTemp, THERMAL_RANGE_SMOOTHING);
+        thermalRenderState.maxTemp = lerp(thermalRenderState.maxTemp, maxTemp, THERMAL_RANGE_SMOOTHING);
+    }
+
+    if (thermalRenderState.maxTemp - thermalRenderState.minTemp < 1) {
+        const midpoint = (thermalRenderState.maxTemp + thermalRenderState.minTemp) / 2;
+        thermalRenderState.minTemp = midpoint - 0.5;
+        thermalRenderState.maxTemp = midpoint + 0.5;
+    }
+
+    return {
+        minTemp: thermalRenderState.minTemp,
+        range: thermalRenderState.maxTemp - thermalRenderState.minTemp,
+    };
+}
+
+function drawHeatmap(canvas, pixels, minTemp, range) {
+    const ctx = canvas.getContext('2d');
+    if (!ctx || pixels.length !== THERMAL_GRID_SIZE * THERMAL_GRID_SIZE) return;
+
+    if (canvas.width !== HEATMAP_CANVAS_SIZE || canvas.height !== HEATMAP_CANVAS_SIZE) {
+        canvas.width = HEATMAP_CANVAS_SIZE;
+        canvas.height = HEATMAP_CANVAS_SIZE;
+    }
+
+    if (!thermalRenderState.lowResCanvas) {
+        thermalRenderState.lowResCanvas = document.createElement('canvas');
+        thermalRenderState.lowResCanvas.width = THERMAL_GRID_SIZE;
+        thermalRenderState.lowResCanvas.height = THERMAL_GRID_SIZE;
+    }
+
+    const lowCtx = thermalRenderState.lowResCanvas.getContext('2d');
+    if (!lowCtx) return;
+
+    for (let row = 0; row < THERMAL_GRID_SIZE; row++) {
+        for (let col = 0; col < THERMAL_GRID_SIZE; col++) {
+            const temp = pixels[row * THERMAL_GRID_SIZE + col];
+            lowCtx.fillStyle = colorForHeat((temp - minTemp) / range);
+            lowCtx.fillRect(col, row, 1, 1);
+        }
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(thermalRenderState.lowResCanvas, 0, 0, canvas.width, canvas.height);
 }
 
 function renderHeatmap(pixels) {
-    $$('[data-heatmap]').forEach(canvas => drawHeatmap(canvas, pixels));
+    const smoothedPixels = blurThermalPixels(smoothThermalPixels(pixels));
+    const { minTemp, range } = thermalRangeFor(smoothedPixels);
+    $$('[data-heatmap]').forEach(canvas => drawHeatmap(canvas, smoothedPixels, minTemp, range));
 }
 
 function connectThermal() {

@@ -136,7 +136,7 @@ main {
       right: 14px;
       width: 100px;
       height: 100px;
-      image-rendering: pixelated;
+      image-rendering: auto;
       border: 1px solid var(--border-bright);
       box-shadow: 0 0 12px var(--green-glow);
       z-index: 4;

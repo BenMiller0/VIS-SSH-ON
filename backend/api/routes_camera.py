@@ -42,10 +42,10 @@ async def ptz(cmd: PTZCommand):
         state.camera.set_zoom(max(ZOOM_MIN, state.camera._zoom_level - ZOOM_STEP * mult))
 
     elif cmd.dir == "up":
-        state.camera.set_pitch(min(PITCH_MAX, state.camera._current_pitch + int(PITCH_STEP * mult)))
+        state.camera.set_pitch(max(PITCH_MIN, state.camera._current_pitch - int(PITCH_STEP * mult)))
 
     elif cmd.dir == "down":
-        state.camera.set_pitch(max(PITCH_MIN, state.camera._current_pitch - int(PITCH_STEP * mult)))
+        state.camera.set_pitch(min(PITCH_MAX, state.camera._current_pitch + int(PITCH_STEP * mult)))
 
     elif cmd.dir == "left":
         state.camera.set_yaw(max(YAW_MIN, state.camera._current_yaw - int(YAW_STEP * mult)))

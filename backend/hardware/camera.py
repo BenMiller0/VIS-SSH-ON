@@ -16,6 +16,8 @@ PITCH_MAX = 90
 YAW_MIN   = 0
 YAW_MAX   = 180
 SETTLE_S  = 0.3
+SERVO_STEP_DEGREES = 1
+SERVO_STEP_DELAY_S = 0.025
 
 PITCH_HOME = 45   # tune this to your physical "straight ahead"
 YAW_HOME   = 90   # center of pan range
@@ -100,14 +102,33 @@ class Camera(CameraInterface):
 
     def set_pitch(self, pitch: int) -> None:
         pitch = max(PITCH_MIN, min(PITCH_MAX, pitch))
-        self._tilt_pwm.set_pulse_ns(_angle_to_ns(pitch, PITCH_MIN, PITCH_MAX))
-        time.sleep(SETTLE_S)
-        self._tilt_pwm.stop()
+        self._move_servo(self._tilt_pwm, self._current_pitch, pitch, PITCH_MIN, PITCH_MAX)
         self._current_pitch = pitch
 
     def set_yaw(self, yaw: int) -> None:
         yaw = max(YAW_MIN, min(YAW_MAX, yaw))
-        self._pan_pwm.set_pulse_ns(_angle_to_ns(yaw, YAW_MIN, YAW_MAX))
-        time.sleep(SETTLE_S)
-        self._pan_pwm.stop()
+        self._move_servo(self._pan_pwm, self._current_yaw, yaw, YAW_MIN, YAW_MAX)
         self._current_yaw = yaw
+
+    def _move_servo(
+        self,
+        pwm: HardwarePWM,
+        start_angle: int,
+        end_angle: int,
+        min_angle: int,
+        max_angle: int,
+    ) -> None:
+        if start_angle == end_angle:
+            pwm.set_pulse_ns(_angle_to_ns(end_angle, min_angle, max_angle))
+            time.sleep(SETTLE_S)
+            pwm.stop()
+            return
+
+        step = SERVO_STEP_DEGREES if end_angle > start_angle else -SERVO_STEP_DEGREES
+        for angle in range(start_angle, end_angle, step):
+            pwm.set_pulse_ns(_angle_to_ns(angle, min_angle, max_angle))
+            time.sleep(SERVO_STEP_DELAY_S)
+
+        pwm.set_pulse_ns(_angle_to_ns(end_angle, min_angle, max_angle))
+        time.sleep(SETTLE_S)
+        pwm.stop()

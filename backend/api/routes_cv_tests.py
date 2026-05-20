@@ -1,5 +1,6 @@
 """Editable Python CV test scripts and runner."""
 
+import copy
 import json
 import os
 import subprocess
@@ -38,7 +39,7 @@ def _latest_payload(history_seconds: float = 3.0) -> dict:
     with state.frame_lock:
         frame = state.latest_frame
     keypoints = detect_keypoints(frame)
-    latest = keypoints["red"]
+    latest = copy.deepcopy(keypoints["red"])
 
     cutoff = time.time() - history_seconds
     samples = []
@@ -47,8 +48,8 @@ def _latest_payload(history_seconds: float = 3.0) -> dict:
 
     for item in frames:
         sample_keypoints = detect_keypoints(item["jpeg"])
-        keypoint = sample_keypoints["red"]
-        keypoint["keypoints"] = sample_keypoints
+        keypoint = copy.deepcopy(sample_keypoints["red"])
+        keypoint["keypoints"] = copy.deepcopy(sample_keypoints)
         keypoint["timestamp"] = item["timestamp"]
         keypoint["time"] = item["time"]
         samples.append(keypoint)

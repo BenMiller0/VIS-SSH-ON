@@ -897,16 +897,15 @@ main .run-layout .viewport {
   z-index: 5;
 }
 
-.vision-overlay::before,
-.vision-overlay::after {
-  content: '';
+.vision-marker,
+.vision-marker::after {
   position: absolute;
   left: var(--keypoint-x, 50%);
   top: var(--keypoint-y, 50%);
   transform: translate(-50%, -50%);
 }
 
-.vision-overlay::before {
+.vision-marker {
   width: 18px;
   height: 18px;
   border: 2px solid var(--red);
@@ -914,7 +913,11 @@ main .run-layout .viewport {
   box-shadow: 0 0 12px rgba(255,59,59,.65);
 }
 
-.vision-overlay::after {
+.vision-marker::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
   width: 34px;
   height: 1px;
   background: var(--red);
@@ -923,6 +926,10 @@ main .run-layout .viewport {
 
 [data-keypoint-coords].missing {
   color: var(--yellow);
+}
+
+[data-keypoint-coords] {
+  white-space: pre-line;
 }
 
 .cv-script-panel {

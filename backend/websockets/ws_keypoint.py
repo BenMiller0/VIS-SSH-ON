@@ -1,6 +1,7 @@
 """Streams the latest colored blob keypoints over /ws/keypoint."""
 
 import asyncio
+import copy
 import json
 from datetime import datetime
 
@@ -20,10 +21,10 @@ async def ws_keypoint(websocket: WebSocket) -> None:
             with state.frame_lock:
                 frame = state.latest_frame
             keypoints = detect_keypoints(frame)
-            payload = keypoints["red"]
+            payload = copy.deepcopy(keypoints["red"])
             if not payload.get("detected") and keypoints["green"].get("detected"):
-                payload = keypoints["green"]
-            payload["keypoints"] = keypoints
+                payload = copy.deepcopy(keypoints["green"])
+            payload["keypoints"] = copy.deepcopy(keypoints)
             payload["type"] = "keypoint"
             payload["timestamp"] = datetime.now().isoformat(timespec="milliseconds")
             await websocket.send_text(json.dumps(payload))

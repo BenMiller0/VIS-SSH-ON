@@ -119,18 +119,48 @@ function preferredKeypointName() {
     ).toLowerCase();
 }
 
+function isMultiRedKeypointTest() {
+    const params = selectedConfig?.parameters ?? {};
+    return String(params.script_path || currentCvScript || '').includes('three_red_keypoints');
+}
+
 function pickKeypoint(data, preferred = preferredKeypointName()) {
     const keypoints = data?.keypoints ?? {};
+    if (isMultiRedKeypointTest() && preferred === 'red' && Array.isArray(keypoints.red_points) && keypoints.red_points.length) {
+        return keypoints.red_points.find(point => point?.detected) || keypoints.red_points[0] || {};
+    }
+    if (Array.isArray(keypoints[preferred])) {
+        return keypoints[preferred].find(point => point?.detected) || keypoints[preferred][0] || {};
+    }
     if (keypoints[preferred]) return keypoints[preferred];
     if (data?.name === preferred || data?.color === preferred) return data;
     if (preferred === 'red' && data && !data.keypoints) return data;
-    const detected = Object.values(keypoints).find(point => point?.detected);
+    const detected = Object.values(keypoints)
+        .flatMap(value => Array.isArray(value) ? value : [value])
+        .find(point => point?.detected);
     return detected || data || {};
 }
 
 function formatKeypointLabel(name) {
     const pretty = name ? `${name.charAt(0).toUpperCase()}${name.slice(1)}` : 'Selected';
     return `${pretty} Keypoint`;
+}
+
+function visibleKeypoints(data, preferred = preferredKeypointName()) {
+    const keypoints = data?.keypoints ?? {};
+    const namedRedPoints = ['red_1', 'red_2', 'red_3']
+        .map(name => keypoints[name])
+        .filter(point => point?.detected);
+
+    if (isMultiRedKeypointTest() && preferred === 'red') {
+        if (Array.isArray(keypoints.red_points) && keypoints.red_points.some(point => point?.detected)) {
+            return keypoints.red_points.filter(point => point?.detected);
+        }
+        if (namedRedPoints.length) return namedRedPoints;
+    }
+
+    const picked = pickKeypoint(data, preferred);
+    return picked?.detected ? [picked] : [];
 }
 
 function updateSelectedConfigSummary() {
@@ -177,14 +207,29 @@ function renderTest(data) {
             metricRows.push(`<div class="metric-line"><span>Temp</span><strong>${escapeHtml(data.temperature)} deg C</strong></div>`);
         }
         if (testType === 'vision') {
-            const point = pickKeypoint(data);
-            const label = formatKeypointLabel(point.name || point.color || preferredKeypointName());
+            const preferred = preferredKeypointName();
+            const points = visibleKeypoints(data, preferred);
+            const point = points[0] || pickKeypoint(data, preferred);
+            const label = points.length > 1
+                ? `${formatKeypointLabel(point.color || preferred).replace(' Keypoint', '')} Keypoints`
+                : formatKeypointLabel(point.name || point.color || preferred);
             if (point.detected !== undefined) {
                 metricRows.push(
-                    `<div class="metric-line"><span>${escapeHtml(label)}</span><strong>${point.detected ? 'detected' : 'missing'}</strong></div>`,
-                    `<div class="metric-line"><span>X</span><strong>${escapeHtml(point.x ?? '-')}</strong></div>`,
-                    `<div class="metric-line"><span>Y</span><strong>${escapeHtml(point.y ?? '-')}</strong></div>`
+                    `<div class="metric-line"><span>${escapeHtml(label)}</span><strong>${points.length || (point.detected ? 'detected' : 'missing')}</strong></div>`
                 );
+                if (points.length > 1) {
+                    points.forEach((candidate, index) => {
+                        metricRows.push(
+                            `<div class="metric-line"><span>${index + 1} X</span><strong>${escapeHtml(candidate.x ?? '-')}</strong></div>`,
+                            `<div class="metric-line"><span>${index + 1} Y</span><strong>${escapeHtml(candidate.y ?? '-')}</strong></div>`
+                        );
+                    });
+                } else {
+                    metricRows.push(
+                        `<div class="metric-line"><span>X</span><strong>${escapeHtml(point.x ?? '-')}</strong></div>`,
+                        `<div class="metric-line"><span>Y</span><strong>${escapeHtml(point.y ?? '-')}</strong></div>`
+                    );
+                }
             }
             if (point.area !== undefined) {
                 metricRows.push(`<div class="metric-line"><span>Area</span><strong>${escapeHtml(point.area)}</strong></div>`);
@@ -337,14 +382,23 @@ function connectCamera() {
 }
 
 function renderKeypoint(data) {
-    const point = pickKeypoint(data);
+    const preferred = preferredKeypointName();
+    const overlayPoints = visibleKeypoints(data, preferred);
+    const point = overlayPoints[0] || pickKeypoint(data, preferred);
     const name = point.name || point.color || preferredKeypointName();
-    const text = point.detected
-        ? `x ${point.x}, y ${point.y}`
-        : 'Not detected';
+    const text = overlayPoints.length > 1
+        ? overlayPoints
+            .map((candidate, index) => `${index + 1}: x ${candidate.x}, y ${candidate.y}`)
+            .join('\n')
+        : point.detected
+            ? `x ${point.x}, y ${point.y}`
+            : 'Not detected';
+    const label = overlayPoints.length > 1
+        ? `${formatKeypointLabel(point.color || preferred).replace(' Keypoint', '')} Keypoints`
+        : formatKeypointLabel(name);
 
     $$('[data-keypoint-label]').forEach(el => {
-        el.textContent = formatKeypointLabel(name);
+        el.textContent = label;
     });
 
     $$('[data-keypoint-coords]').forEach(el => {
@@ -354,15 +408,20 @@ function renderKeypoint(data) {
 
     $$('.vision-overlay').forEach(overlay => {
         const viewport = overlay.closest('.viewport');
-        if (!viewport || !point.detected || !point.frame_width || !point.frame_height) {
+        const firstPoint = overlayPoints[0];
+        if (!viewport || !firstPoint?.frame_width || !firstPoint?.frame_height) {
             overlay.hidden = true;
+            overlay.innerHTML = '';
             return;
         }
         overlay.hidden = false;
-        const left = (point.x / point.frame_width) * 100;
-        const top = (point.y / point.frame_height) * 100;
-        overlay.style.setProperty('--keypoint-x', `${left}%`);
-        overlay.style.setProperty('--keypoint-y', `${top}%`);
+        overlay.innerHTML = overlayPoints
+            .map(candidate => {
+                const left = (candidate.x / candidate.frame_width) * 100;
+                const top = (candidate.y / candidate.frame_height) * 100;
+                return `<span class="vision-marker" style="--keypoint-x:${left}%;--keypoint-y:${top}%"></span>`;
+            })
+            .join('');
     });
 }
 

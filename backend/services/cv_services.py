@@ -23,8 +23,7 @@ def decode_jpeg(frame_bytes: bytes | None):
     return cv2.imdecode(arr, cv2.IMREAD_COLOR)
 
 
-def _find_color_blob(frame, color: str) -> tuple[float, float, float] | None:
-    """Return (x, y, area) for the largest matching blob, or None."""
+def _color_mask(frame, color: str):
     ranges = _COLOR_RANGES.get(color)
     if ranges is None:
         raise ValueError(f"Unsupported keypoint color: {color}")
@@ -53,19 +52,67 @@ def _find_color_blob(frame, color: str) -> tuple[float, float, float] | None:
     if color == "green":
         mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((7, 7), dtype=np.uint8))
 
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    if not contours:
+    return mask
+
+
+def _contour_keypoint(contour) -> tuple[float, float, float] | None:
+    area = cv2.contourArea(contour)
+    if area < MIN_BLOB_AREA:
         return None
 
-    largest = max(contours, key=cv2.contourArea)
-    if cv2.contourArea(largest) < MIN_BLOB_AREA:
-        return None
-
-    m = cv2.moments(largest)
+    m = cv2.moments(contour)
     if m["m00"] == 0:
         return None
 
-    return m["m10"] / m["m00"], m["m01"] / m["m00"], cv2.contourArea(largest)
+    return m["m10"] / m["m00"], m["m01"] / m["m00"], area
+
+
+def _find_color_blobs(frame, color: str, *, limit: int | None = None) -> list[tuple[float, float, float]]:
+    """Return matching color blobs sorted largest-first."""
+    mask = _color_mask(frame, color)
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
+        return []
+
+    points = [
+        point
+        for contour in contours
+        for point in [_contour_keypoint(contour)]
+        if point is not None
+    ]
+    points.sort(key=lambda point: point[2], reverse=True)
+    return points[:limit] if limit is not None else points
+
+
+def _find_color_blob(frame, color: str) -> tuple[float, float, float] | None:
+    """Return (x, y, area) for the largest matching blob, or None."""
+    blobs = _find_color_blobs(frame, color, limit=1)
+    return blobs[0] if blobs else None
+
+
+def _format_keypoint(
+    *,
+    color: str,
+    detected: bool,
+    x: float | None,
+    y: float | None,
+    area: float,
+    frame_width: int | None,
+    frame_height: int | None,
+    name: str | None = None,
+    note: str | None = None,
+) -> dict:
+    return {
+        "name": name or color,
+        "color": color,
+        "detected": detected,
+        "x": round(x, 2) if x is not None else None,
+        "y": round(y, 2) if y is not None else None,
+        "area": round(area, 2),
+        "frame_width": frame_width,
+        "frame_height": frame_height,
+        "note": note or (f"{color.title()} blob keypoint" if detected else f"{color.title()} blob not visible"),
+    }
 
 
 def supported_keypoint_colors() -> tuple[str, ...]:
@@ -79,17 +126,16 @@ def detect_color_keypoint(frame_bytes: bytes | None, color: str = "red", roi: st
 
     frame = decode_jpeg(frame_bytes)
     if frame is None:
-        return {
-            "name": color,
-            "color": color,
-            "detected": False,
-            "x": None,
-            "y": None,
-            "area": 0.0,
-            "frame_width": None,
-            "frame_height": None,
-            "note": "No camera frame available",
-        }
+        return _format_keypoint(
+            color=color,
+            detected=False,
+            x=None,
+            y=None,
+            area=0.0,
+            frame_width=None,
+            frame_height=None,
+            note="No camera frame available",
+        )
 
     h, w = frame.shape[:2]
     offset_x = 0
@@ -106,37 +152,84 @@ def detect_color_keypoint(frame_bytes: bytes | None, color: str = "red", roi: st
 
     pos = _find_color_blob(frame, color)
     if pos is None:
-        return {
-            "name": color,
-            "color": color,
-            "detected": False,
-            "x": None,
-            "y": None,
-            "area": 0.0,
-            "frame_width": w,
-            "frame_height": h,
-            "note": f"{color.title()} blob not visible",
-        }
+        return _format_keypoint(
+            color=color,
+            detected=False,
+            x=None,
+            y=None,
+            area=0.0,
+            frame_width=w,
+            frame_height=h,
+        )
 
     x, y, area = pos
-    return {
-        "name": color,
-        "color": color,
-        "detected": True,
-        "x": round(x + offset_x, 2),
-        "y": round(y + offset_y, 2),
-        "area": round(area, 2),
-        "frame_width": w,
-        "frame_height": h,
-        "note": f"{color.title()} blob keypoint",
-    }
+    return _format_keypoint(
+        color=color,
+        detected=True,
+        x=x + offset_x,
+        y=y + offset_y,
+        area=area,
+        frame_width=w,
+        frame_height=h,
+    )
 
 
-def detect_keypoints(frame_bytes: bytes | None, roi: str | None = None) -> dict[str, dict]:
-    return {
+def detect_color_keypoints(
+    frame_bytes: bytes | None,
+    color: str = "red",
+    roi: str | None = None,
+    *,
+    limit: int | None = None,
+) -> list[dict]:
+    color = color.lower().strip()
+    if color not in _COLOR_RANGES:
+        color = "red"
+
+    frame = decode_jpeg(frame_bytes)
+    if frame is None:
+        return []
+
+    h, w = frame.shape[:2]
+    offset_x = 0
+    offset_y = 0
+
+    if roi:
+        try:
+            rx, ry, rw, rh = [int(p.strip()) for p in roi.split(",")]
+            frame = frame[ry:ry + rh, rx:rx + rw]
+            offset_x = rx
+            offset_y = ry
+        except ValueError:
+            pass
+
+    blobs = _find_color_blobs(frame, color, limit=limit)
+    blobs.sort(key=lambda point: (point[0], point[1]))
+
+    return [
+        _format_keypoint(
+            color=color,
+            name=f"{color}_{index}",
+            detected=True,
+            x=x + offset_x,
+            y=y + offset_y,
+            area=area,
+            frame_width=w,
+            frame_height=h,
+        )
+        for index, (x, y, area) in enumerate(blobs, start=1)
+    ]
+
+
+def detect_keypoints(frame_bytes: bytes | None, roi: str | None = None) -> dict[str, dict | list[dict]]:
+    keypoints: dict[str, dict | list[dict]] = {
         color: detect_color_keypoint(frame_bytes, color=color, roi=roi)
         for color in supported_keypoint_colors()
     }
+    red_points = detect_color_keypoints(frame_bytes, color="red", roi=roi, limit=3)
+    keypoints["red_points"] = red_points
+    for point in red_points:
+        keypoints[point["name"]] = point
+    return keypoints
 
 
 def detect_red_keypoint(frame_bytes: bytes | None, roi: str | None = None) -> dict:

@@ -6,7 +6,7 @@ EXPECTED_DIRECTION = "clockwise"
 
 
 def main() -> None:
-    green = vis.keypoint("green")
+    green = vis.keypoint("red")
     observed, degrees = green.rotation()
     green.should_rotate(EXPECTED_DIRECTION)
     vis.pass_test(

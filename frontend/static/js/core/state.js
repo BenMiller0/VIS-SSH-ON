@@ -25,6 +25,10 @@ export const replayState = {
 };
 
 export const appState = {
+    cameraOrientation: {
+        flipHorizontal: false,
+        flipVertical: false,
+    },
     currentRunId: null,
     selectedConfig: null,
     selectedRun: null,

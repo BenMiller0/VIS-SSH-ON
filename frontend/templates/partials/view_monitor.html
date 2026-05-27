@@ -5,9 +5,9 @@
 
             <div class="monitor-layout">
                 <div class="viewport">
-                    <img id="image" data-camera-feed height="400" alt="Live camera feed" />
+                    <img id="image" data-camera-feed data-camera-orientable height="400" alt="Live camera feed" />
                     <canvas id="heatmap" data-heatmap width="8" height="8"></canvas>
-                    <div id="monitor-overlay" class="vision-overlay" hidden></div>
+                    <div id="monitor-overlay" class="vision-overlay" data-camera-orientable hidden></div>
                 </div>
 
                 <aside class="side-panel">
@@ -46,6 +46,17 @@
                                     <button class="zoom-btn" data-dir="zoom-out" aria-label="Zoom Out">-</button>
                                 </div>
                             </div>
+                        </div>
+                        <div class="cam-orientation" aria-label="Camera orientation">
+                            <span class="cam-orientation-label">ORIENTATION</span>
+                            <label class="cam-toggle">
+                                <input id="camera-flip-vertical" type="checkbox" />
+                                <span>Flip V</span>
+                            </label>
+                            <label class="cam-toggle">
+                                <input id="camera-flip-horizontal" type="checkbox" />
+                                <span>Flip H</span>
+                            </label>
                         </div>
                     </div>
                 </aside>

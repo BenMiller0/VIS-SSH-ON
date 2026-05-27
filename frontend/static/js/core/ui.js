@@ -163,6 +163,13 @@ export function renderKeypoint(root, data) {
     });
 }
 
+export function applyCameraOrientation(orientation) {
+    $$('.viewport, .replay-frame').forEach(surface => {
+        surface.classList.toggle('camera-flip-horizontal', orientation.flipHorizontal);
+        surface.classList.toggle('camera-flip-vertical', orientation.flipVertical);
+    });
+}
+
 function drawHeatmap(canvas, pixels) {
     const context = canvas.getContext('2d');
     const cellSize = canvas.width / 8;

@@ -4,8 +4,8 @@
  * static/js/pages/view_monitor.js
  *
  * Controller for partials/view_monitor.html.
- * Owns the live monitor viewport, connection badge, keypoint readout, and PTZ
- * controls rendered inside the Monitor partial.
+ * Owns the live monitor viewport, connection badge, keypoint readout, PTZ
+ * controls, and persisted camera orientation controls rendered in Monitor.
  *
  * Architecture notes:
  * - subscribes to core/ws.js events through the shared event bus
@@ -15,10 +15,12 @@
 
 import { api } from '../core/api.js';
 import { on } from '../core/events.js';
-import { $, $$, isEditableElement, renderBlobToImages, renderHeatmapCanvases, renderKeypoint, setConnectionStatus } from '../core/ui.js';
+import { appState } from '../core/state.js';
+import { $, $$, applyCameraOrientation, isEditableElement, renderBlobToImages, renderHeatmapCanvases, renderKeypoint, setConnectionStatus } from '../core/ui.js';
 
 const THROTTLE_MS = 300;
 const FLASH_MS = 80;
+const CAMERA_ORIENTATION_STORAGE_KEY = 'vis-ssh-on:camera-orientation';
 
 const KEY_MAP = {
     ArrowUp: 'up',
@@ -186,4 +188,64 @@ export function initViewMonitor() {
     on('ws:keypoint:data', renderMonitorKeypoint);
 
     initPtzControls();
+    initCameraOrientationControls();
+}
+
+// -- Camera orientation ------------------------------------------------------
+
+function initCameraOrientationControls() {
+    loadCameraOrientation();
+    applyCameraOrientation(appState.cameraOrientation);
+    syncCameraOrientationControls();
+
+    $('#camera-flip-vertical')?.addEventListener('change', event => {
+        appState.cameraOrientation.flipVertical = event.target.checked;
+        saveCameraOrientation();
+        applyCameraOrientation(appState.cameraOrientation);
+    });
+
+    $('#camera-flip-horizontal')?.addEventListener('change', event => {
+        appState.cameraOrientation.flipHorizontal = event.target.checked;
+        saveCameraOrientation();
+        applyCameraOrientation(appState.cameraOrientation);
+    });
+}
+
+function syncCameraOrientationControls() {
+    const verticalToggle = $('#camera-flip-vertical');
+    const horizontalToggle = $('#camera-flip-horizontal');
+
+    if (verticalToggle) {
+        verticalToggle.checked = appState.cameraOrientation.flipVertical;
+    }
+
+    if (horizontalToggle) {
+        horizontalToggle.checked = appState.cameraOrientation.flipHorizontal;
+    }
+}
+
+function loadCameraOrientation() {
+    try {
+        const rawValue = localStorage.getItem(CAMERA_ORIENTATION_STORAGE_KEY);
+        if (!rawValue) {
+            return;
+        }
+
+        const savedOrientation = JSON.parse(rawValue);
+        appState.cameraOrientation.flipHorizontal = savedOrientation.flipHorizontal === true;
+        appState.cameraOrientation.flipVertical = savedOrientation.flipVertical === true;
+    } catch (error) {
+        console.error('Could not load camera orientation preference:', error);
+    }
+}
+
+function saveCameraOrientation() {
+    try {
+        localStorage.setItem(
+            CAMERA_ORIENTATION_STORAGE_KEY,
+            JSON.stringify(appState.cameraOrientation)
+        );
+    } catch (error) {
+        console.error('Could not save camera orientation preference:', error);
+    }
 }

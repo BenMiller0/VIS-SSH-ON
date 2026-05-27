@@ -40,7 +40,7 @@ function ensureReplayShell(frame) {
 
     if (!image || !badge) {
         frame.innerHTML = `
-            <img id="replay-image" class="replay-image" alt="Replay frame" />
+            <img id="replay-image" class="replay-image" data-camera-orientable alt="Replay frame" />
             <div id="replay-badge" class="replay-badge"></div>
             <div id="replay-loading" class="replay-loading">Loading frame...</div>
         `;

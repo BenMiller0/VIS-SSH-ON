@@ -14,6 +14,14 @@ import numpy as np
 ZOOM_MIN = 1.0
 ZOOM_MAX = 8.0
 
+# PTZ constants - available without importing Raspberry Pi-only camera modules
+PITCH_MIN = 0
+PITCH_MAX = 90
+YAW_MIN = 0
+YAW_MAX = 180
+PITCH_HOME = 45
+YAW_HOME = 90
+
 
 class CameraInterface(ABC):
 

@@ -7,18 +7,19 @@ from pathlib import Path
 
 from picamera2 import Picamera2
 
-from backend.hardware.interface_camera import CameraInterface
+from backend.hardware.interface_camera import (
+    CameraInterface,
+    PITCH_HOME,
+    PITCH_MAX,
+    PITCH_MIN,
+    YAW_HOME,
+    YAW_MAX,
+    YAW_MIN,
+)
 
 ZOOM_MIN  = 1.0
 ZOOM_MAX  = 8.0
-PITCH_MIN = 0
-PITCH_MAX = 90
-YAW_MIN   = 0
-YAW_MAX   = 180
 SETTLE_S  = 0.3
-
-PITCH_HOME = 45   # tune this to your physical "straight ahead"
-YAW_HOME   = 90   # center of pan range
 
 PWM_CHIP    = 0
 PWM_CH_TILT = 0   # GPIO 12

@@ -1,9 +1,7 @@
 """Rotation-direction test for the green blob keypoint."""
-
 import vis_ssh_on as vis
 
 EXPECTED_DIRECTION = "clockwise"
-
 
 def main() -> None:
     green = vis.keypoint("red")
@@ -15,7 +13,6 @@ def main() -> None:
         samples=len(green.samples),
         delta_degrees=degrees,
     )
-
 
 if __name__ == "__main__":
     main()

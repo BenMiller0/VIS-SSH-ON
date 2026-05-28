@@ -986,6 +986,10 @@ main .run-layout .viewport {
 
 .cv-script-panel .CodeMirror {
   height: 360px;
+  min-height: 240px;
+  max-height: 80vh;
+  resize: vertical;
+  overflow: hidden;
   border-top: 1px solid var(--border);
   font-family: var(--font-mono);
   font-size: 14px;

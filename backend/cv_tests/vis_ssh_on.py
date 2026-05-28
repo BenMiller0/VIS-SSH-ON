@@ -7,6 +7,9 @@ Example:
     red = vis.keypoint("red").should_be_visible()
     red.should_rotate("clockwise")
     vis.pass_test(x=red.x, y=red.y)
+
+    red_points = vis.keypoints("red", count=3).should_be_visible()
+    vis.pass_test(red_keypoint_count=len(red_points))
 """
 
 from __future__ import annotations
@@ -46,6 +49,11 @@ def keypoint(name: str = "red") -> "Keypoint":
     return scene().keypoint(name)
 
 
+def keypoints(name: str = "red", *, count: int = 1) -> "KeypointGroup":
+    """Declare a group of same-color keypoints to test."""
+    return scene().keypoints(name, count=count)
+
+
 def scene(data: dict[str, Any] | None = None) -> "Scene":
     return Scene(data or payload())
 
@@ -55,6 +63,53 @@ def _sample_keypoint(sample: dict[str, Any], name: str) -> dict[str, Any]:
         return sample["keypoints"].get(name, {})
     value = sample.get(name, sample)
     return value if isinstance(value, dict) else {}
+
+
+def _as_point_list(value: Any) -> list[dict[str, Any]]:
+    if isinstance(value, list):
+        return [point for point in value if isinstance(point, dict)]
+    if isinstance(value, dict):
+        return [value]
+    return []
+
+
+def _sample_keypoints(sample: dict[str, Any], name: str) -> list[dict[str, Any]]:
+    keypoints = sample.get("keypoints", {})
+    candidates: list[dict[str, Any]] = []
+
+    if isinstance(keypoints, dict):
+        plural_points = _as_point_list(keypoints.get(f"{name}_points"))
+        candidates.extend(plural_points)
+
+        named_value = keypoints.get(name)
+        if isinstance(named_value, list) or not plural_points:
+            candidates.extend(_as_point_list(named_value))
+
+        index = 1
+        while True:
+            point = keypoints.get(f"{name}_{index}")
+            if not isinstance(point, dict):
+                break
+            candidates.append(point)
+            index += 1
+
+    candidates.extend(_as_point_list(sample.get(f"{name}_points")))
+    candidates.extend(_as_point_list(sample.get(f"{name}_keypoints")))
+
+    if not candidates:
+        top_level = sample.get("keypoint", {})
+        if isinstance(top_level, dict) and (top_level.get("name") == name or top_level.get("color") == name):
+            candidates.append(top_level)
+
+    seen: set[tuple[Any, Any, Any]] = set()
+    unique: list[dict[str, Any]] = []
+    for point in candidates:
+        marker = (point.get("name"), point.get("x"), point.get("y"))
+        if marker in seen:
+            continue
+        seen.add(marker)
+        unique.append(point)
+    return unique
 
 
 @dataclass
@@ -86,6 +141,89 @@ class Scene:
             samples.append(latest)
 
         return Keypoint(name=name, latest=latest, samples=samples)
+
+    def keypoints(self, name: str = "red", *, count: int = 1) -> "KeypointGroup":
+        if count < 1:
+            fail("keypoint count must be at least 1", observed_count=count)
+
+        lookup_name = "red" if name in {"red_blob", "blob"} else name
+        tracks: list[list[dict[str, Any]]] = [[] for _ in range(count)]
+        for sample in self.data.get("history", []):
+            if not isinstance(sample, dict):
+                continue
+            points = [
+                point
+                for point in _sample_keypoints(sample, lookup_name)
+                if point.get("detected")
+            ][:count]
+            for index, point in enumerate(points):
+                tracks[index].append(point)
+
+        latest = [
+            point
+            for point in _sample_keypoints(self.data, lookup_name)
+            if point.get("detected")
+        ][:count]
+        for index, point in enumerate(latest):
+            tracks[index].append(point)
+
+        points = [
+            Keypoint(
+                name=(track[-1].get("name") if track else None) or f"{name}_{index + 1}",
+                latest=track[-1] if track else {},
+                samples=tracks[index],
+            )
+            for index, track in enumerate(tracks)
+        ]
+
+        return KeypointGroup(name=name, expected_count=count, points=points)
+
+
+@dataclass
+class KeypointGroup:
+    name: str
+    expected_count: int
+    points: list["Keypoint"]
+
+    def __iter__(self):
+        return iter(self.points)
+
+    def __len__(self) -> int:
+        return len([point for point in self.points if point.detected])
+
+    def __getitem__(self, index: int) -> "Keypoint":
+        return self.points[index]
+
+    @property
+    def detected(self) -> list["Keypoint"]:
+        return [point for point in self.points if point.detected]
+
+    @property
+    def coordinates(self) -> list[dict[str, float | None]]:
+        return [point.coordinates for point in self.detected]
+
+    @property
+    def areas(self) -> list[float]:
+        return [point.area for point in self.detected]
+
+    def should_be_visible(self, *, min_area: float | None = None) -> "KeypointGroup":
+        observed = len(self)
+        if observed < self.expected_count:
+            fail(
+                f"expected {self.expected_count} {self.name} keypoints",
+                expected_count=self.expected_count,
+                observed_count=observed,
+            )
+
+        for point in self.points[:self.expected_count]:
+            point.should_be_visible(min_area=min_area)
+        return self
+
+    def should_have_moved(self, *, at_least: float = 8.0) -> "KeypointGroup":
+        self.should_be_visible()
+        for point in self.points[:self.expected_count]:
+            point.should_have_moved(at_least=at_least)
+        return self
 
 
 @dataclass
@@ -142,9 +280,11 @@ class Keypoint:
         if len(self.samples) < 2:
             fail(f"{self.name} keypoint needs at least two detected samples", samples=len(self.samples))
 
-        start = self.samples[0]
-        end = self.samples[-1]
-        distance = math.hypot(float(end["x"]) - float(start["x"]), float(end["y"]) - float(start["y"]))
+        distance = max(
+            math.hypot(float(end["x"]) - float(start["x"]), float(end["y"]) - float(start["y"]))
+            for start_index, start in enumerate(self.samples)
+            for end in self.samples[start_index + 1:]
+        )
         if distance < at_least:
             fail(
                 f"{self.name} keypoint did not move enough",
@@ -245,10 +385,12 @@ class Keypoint:
 
 __all__ = [
     "Keypoint",
+    "KeypointGroup",
     "Scene",
     "detected_points",
     "fail",
     "keypoint",
+    "keypoints",
     "load_payload",
     "pass_test",
     "payload",

@@ -14,6 +14,7 @@ let lastFailureByRun = {};
 let cvScripts = [];
 let currentCvScript = 'rotation_test.py';
 let cvCodeMirror = null;
+let cvEditorResizeObserver = null;
 const replayState = {
     runId: null,
     frames: [],
@@ -114,8 +115,31 @@ function keypointNameFromMetric(metric) {
 
 function inferScriptKeypointColor() {
     const source = getCvEditorValue?.() || '';
-    const match = source.match(/(?:vis\.)?keypoint\(\s*["']([a-zA-Z0-9_-]+)["']\s*\)/);
+    const match = source.match(/(?:vis\.)?keypoints?\(\s*["']([a-zA-Z0-9_-]+)["']\s*\)/);
     return match?.[1]?.toLowerCase() || '';
+}
+
+function inferredScriptKeypointCount() {
+    const source = getCvEditorValue?.() || '';
+    const groupCall = source.match(/(?:vis\.)?keypoints\([\s\S]*?\)/);
+    if (!groupCall) return 1;
+
+    const countMatch = groupCall[0].match(/count\s*=\s*(\d+)/);
+    if (countMatch) return Math.max(1, parseInt(countMatch[1], 10));
+
+    if (isMultiRedKeypointTest()) return 3;
+    return 1;
+}
+
+function preferredKeypointCount() {
+    const params = selectedConfig?.parameters ?? {};
+    const rawCount = parseInt(params.keypoint_count || params.count, 10);
+    if (rawCount > 0) return rawCount;
+
+    const scriptCount = inferredScriptKeypointCount();
+    if (scriptCount > 1) return scriptCount;
+    if (isMultiRedKeypointTest()) return 3;
+    return 1;
 }
 
 function preferredKeypointName() {
@@ -134,13 +158,32 @@ function isMultiRedKeypointTest() {
     return String(params.script_path || currentCvScript || '').includes('three_red_keypoints');
 }
 
+function keypointArray(data, preferred = preferredKeypointName(), count = preferredKeypointCount()) {
+    if (count <= 1) return [];
+
+    const keypoints = data?.keypoints ?? {};
+    const pluralName = `${preferred}_points`;
+    const pluralPoints = Array.isArray(keypoints[pluralName]) ? keypoints[pluralName] : [];
+    const directPoints = Array.isArray(keypoints[preferred]) ? keypoints[preferred] : [];
+
+    if (pluralPoints.length) return pluralPoints.slice(0, count);
+    if (directPoints.length) return directPoints.slice(0, count);
+
+    if (preferred === 'red') {
+        const namedRedPoints = ['red_1', 'red_2', 'red_3']
+            .map(name => keypoints[name])
+            .filter(point => point?.detected);
+        if (namedRedPoints.length > 1 || isMultiRedKeypointTest()) return namedRedPoints.slice(0, count);
+    }
+
+    return [];
+}
+
 function pickKeypoint(data, preferred = preferredKeypointName()) {
     const keypoints = data?.keypoints ?? {};
-    if (isMultiRedKeypointTest() && preferred === 'red' && Array.isArray(keypoints.red_points) && keypoints.red_points.length) {
-        return keypoints.red_points.find(point => point?.detected) || keypoints.red_points[0] || {};
-    }
-    if (Array.isArray(keypoints[preferred])) {
-        return keypoints[preferred].find(point => point?.detected) || keypoints[preferred][0] || {};
+    const points = keypointArray(data, preferred);
+    if (points.length) {
+        return points.find(point => point?.detected) || points[0] || {};
     }
     if (keypoints[preferred]) return keypoints[preferred];
     if (data?.name === preferred || data?.color === preferred) return data;
@@ -157,17 +200,8 @@ function formatKeypointLabel(name) {
 }
 
 function visibleKeypoints(data, preferred = preferredKeypointName()) {
-    const keypoints = data?.keypoints ?? {};
-    const namedRedPoints = ['red_1', 'red_2', 'red_3']
-        .map(name => keypoints[name])
-        .filter(point => point?.detected);
-
-    if (isMultiRedKeypointTest() && preferred === 'red') {
-        if (Array.isArray(keypoints.red_points) && keypoints.red_points.some(point => point?.detected)) {
-            return keypoints.red_points.filter(point => point?.detected);
-        }
-        if (namedRedPoints.length) return namedRedPoints;
-    }
+    const points = keypointArray(data, preferred).filter(point => point?.detected);
+    if (points.length) return points;
 
     const picked = pickKeypoint(data, preferred);
     return picked?.detected ? [picked] : [];
@@ -225,23 +259,10 @@ function renderTest(data) {
                 : formatKeypointLabel(point.name || point.color || preferred);
             if (point.detected !== undefined) {
                 metricRows.push(
-                    `<div class="metric-line"><span>${escapeHtml(label)}</span><strong>${points.length || (point.detected ? 'detected' : 'missing')}</strong></div>`
+                    `<div class="metric-line"><span>${escapeHtml(label)}</span><strong>${escapeHtml(points.length || (point.detected ? 'detected' : 'missing'))}</strong></div>`
                 );
-                if (points.length > 1) {
-                    points.forEach((candidate, index) => {
-                        metricRows.push(
-                            `<div class="metric-line"><span>${index + 1} X</span><strong>${escapeHtml(candidate.x ?? '-')}</strong></div>`,
-                            `<div class="metric-line"><span>${index + 1} Y</span><strong>${escapeHtml(candidate.y ?? '-')}</strong></div>`
-                        );
-                    });
-                } else {
-                    metricRows.push(
-                        `<div class="metric-line"><span>X</span><strong>${escapeHtml(point.x ?? '-')}</strong></div>`,
-                        `<div class="metric-line"><span>Y</span><strong>${escapeHtml(point.y ?? '-')}</strong></div>`
-                    );
-                }
             }
-            if (point.area !== undefined) {
+            if (points.length <= 1 && point.area !== undefined) {
                 metricRows.push(`<div class="metric-line"><span>Area</span><strong>${escapeHtml(point.area)}</strong></div>`);
             }
         }
@@ -670,6 +691,10 @@ function ensureCvEditor() {
                 : cm.replaceSelection('    ', 'end'),
         },
     });
+    if (typeof ResizeObserver !== 'undefined') {
+        cvEditorResizeObserver = new ResizeObserver(() => cvCodeMirror.refresh());
+        cvEditorResizeObserver.observe(cvCodeMirror.getWrapperElement());
+    }
     return cvCodeMirror;
 }
 

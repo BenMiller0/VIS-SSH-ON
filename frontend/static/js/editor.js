@@ -34,6 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentFile = '';
   let unsaved     = false;
 
+  function normalizePath(filePath) {
+    return filePath.replace(/\\/g, '/');
+  }
+
   // ── Modal ──────────────────────────────────────────────────────────────────
   async function openModal() {
     modal.style.display = 'flex';
@@ -105,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const groups = {};
       for (const f of files) {
-        const norm  = f.replace(/\\/g, '/');
+        const norm  = normalizePath(f);
         const slash = norm.lastIndexOf('/');
         const dir   = slash >= 0 ? norm.slice(0, slash) : '';
         const name  = norm.slice(slash + 1);
@@ -127,6 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
         items.forEach(({ name, path }) => {
           const row = document.createElement('div');
           row.className = 'file-row';
+          row.dataset.filePath = path;
           if (path === currentFile) row.classList.add('active');
 
           const openBtn2 = document.createElement('button');
@@ -193,6 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   async function openFile(filePath) {
+    filePath = normalizePath(filePath);
     try {
       const res  = await fetch(`/api/files/${encodeURIComponent(filePath)}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -248,10 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Highlight active file in sidebar
       document.querySelectorAll('.file-row').forEach(row => {
-        const btn = row.querySelector('.file-row-open');
-        const fname = btn?.querySelector('.fname')?.textContent;
-        const name  = filePath.split('/').pop();
-        row.classList.toggle('active', fname === name && filePath === currentFile);
+        row.classList.toggle('active', row.dataset.filePath === currentFile);
       });
 
     } catch (err) {

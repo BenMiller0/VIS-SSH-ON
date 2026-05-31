@@ -4,14 +4,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── DOM ─────────────────────────────────────────────────────────────────────
   const modal          = document.getElementById('editor-modal');
-  const screenPicker   = document.getElementById('screen-picker');
-  const screenEditor   = document.getElementById('screen-editor');
   const fileListEl     = document.getElementById('file-list');
-  const editorTitle    = document.getElementById('bar-filename');
   const saveBtn        = document.getElementById('save-btn');
   const saveStatusEl   = document.getElementById('save-status');
-  const backBtn        = document.getElementById('back-btn');
-  const closePicker    = document.getElementById('close-picker');
   const closeEditor    = document.getElementById('close-editor');
   const openBtn        = document.getElementById('editor-btn');
   const toggleNewBtn   = document.getElementById('toggle-new-file');
@@ -19,11 +14,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const newFileInput   = document.getElementById('new-file-input');
   const newFileConfirm = document.getElementById('new-file-confirm');
   const newFileErr     = document.getElementById('new-file-err');
+  const ideTab         = document.getElementById('ide-tab');
+  const ideTabName     = document.getElementById('bar-filename');
+  const ideTabDot      = document.getElementById('ide-tab-dot');
+  const ideNoFile      = document.getElementById('ide-no-file');
+  const cmWrap         = document.getElementById('cm-wrap');
+  const ideCursor      = document.getElementById('ide-cursor');
+  const ideFiletype    = document.getElementById('ide-filetype');
 
-  // Bail early with a clear message if anything is missing
-  const required = { modal, screenPicker, screenEditor, fileListEl, editorTitle,
-    saveBtn, saveStatusEl, backBtn, closePicker, closeEditor, openBtn,
-    toggleNewBtn, newFileRow, newFileInput, newFileConfirm, newFileErr };
+  const required = { modal, fileListEl, saveBtn, saveStatusEl, closeEditor,
+    openBtn, toggleNewBtn, newFileRow, newFileInput, newFileConfirm, newFileErr,
+    ideTab, ideTabName, ideTabDot, ideNoFile, cmWrap };
   for (const [id, el] of Object.entries(required)) {
     if (!el) { console.error(`[editor] missing element: #${id}`); return; }
   }
@@ -33,23 +34,9 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentFile = '';
   let unsaved     = false;
 
-  // ── Screens ────────────────────────────────────────────────────────────────
-  function showPicker() {
-    screenEditor.style.display = 'none';
-    screenPicker.style.display = 'flex';
-    hideNewFileRow();
-  }
-
-  function showEditor() {
-    screenPicker.style.display = 'none';
-    screenEditor.style.display = 'flex';
-    requestAnimationFrame(() => cm && cm.refresh());
-  }
-
   // ── Modal ──────────────────────────────────────────────────────────────────
   async function openModal() {
     modal.style.display = 'flex';
-    showPicker();
     await loadFileList();
   }
 
@@ -65,19 +52,19 @@ document.addEventListener('DOMContentLoaded', () => {
     newFileInput.value = '';
     newFileErr.textContent = '';
     newFileInput.focus();
-    toggleNewBtn.textContent = '✕ CANCEL';
+    toggleNewBtn.textContent = '✕';
   }
 
   function hideNewFileRow() {
     newFileRow.style.display = 'none';
     newFileInput.value = '';
     newFileErr.textContent = '';
-    toggleNewBtn.textContent = '+ NEW FILE';
+    toggleNewBtn.textContent = '+';
   }
 
   async function createNewFile() {
     const raw = newFileInput.value.trim().replace(/\\/g, '/').replace(/^\/+/, '');
-    if (!raw)              return (newFileErr.textContent = 'Enter a filename.');
+    if (!raw)               return (newFileErr.textContent = 'Enter a filename.');
     if (!raw.includes('.')) return (newFileErr.textContent = 'Include an extension (e.g. .cpp).');
 
     newFileConfirm.disabled = true;
@@ -126,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       fileListEl.innerHTML = '';
-      Object.entries(groups).forEach(([dir, items], gi) => {
+      Object.entries(groups).forEach(([dir, items]) => {
         const group = document.createElement('div');
         group.className = 'file-group';
 
@@ -138,27 +125,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         items.forEach(({ name, path }) => {
-          const ext = name.includes('.') ? name.split('.').pop().toUpperCase() : '?';
-
           const row = document.createElement('div');
           row.className = 'file-row';
+          if (path === currentFile) row.classList.add('active');
 
           const openBtn2 = document.createElement('button');
           openBtn2.className = 'file-row-open';
-          openBtn2.innerHTML =
-            `<span class="ext-badge">${ext}</span>` +
-            `<span class="fname">${name}</span>` +
-            `<span class="fopen">OPEN →</span>`;
+          openBtn2.innerHTML = `<span class="fname">${name}</span>`;
           openBtn2.addEventListener('click', () => openFile(path));
 
           const del = document.createElement('button');
           del.className   = 'file-row-delete';
           del.textContent = '🗑';
           del.title       = 'Delete file';
-          del.addEventListener('click', (e) => {
-            e.stopPropagation();
-            deleteFile(path);
-          });
+          del.addEventListener('click', e => { e.stopPropagation(); deleteFile(path); });
 
           row.appendChild(openBtn2);
           row.appendChild(del);
@@ -180,11 +160,13 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const res = await fetch(`/api/files/${encodeURIComponent(filePath)}`, { method: 'DELETE' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      // If the deleted file is currently open, go back to picker
       if (currentFile === filePath) {
         currentFile = '';
         unsaved = false;
-        showPicker();
+        ideTab.style.display    = 'none';
+        cmWrap.style.display    = 'none';
+        ideNoFile.style.display = 'flex';
+        if (cm) cm.setValue('');
       }
       await loadFileList();
     } catch (err) {
@@ -193,15 +175,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-    // ── Editor ─────────────────────────────────────────────────────────────────
+  // ── Editor ─────────────────────────────────────────────────────────────────
   const MODE_MAP = {
-    cpp:'text/x-c++src', cc:'text/x-c++src', cxx:'text/x-c++src',
-    c:  'text/x-csrc',
-    h:  'text/x-c++src', hpp:'text/x-c++src',
-    ino:'text/x-c++src',
-    py: 'text/x-python',
-    js: 'text/javascript',
-    json:'application/json',
+    cpp: 'text/x-c++src', cc: 'text/x-c++src', cxx: 'text/x-c++src',
+    c:   'text/x-csrc',
+    h:   'text/x-c++src', hpp: 'text/x-c++src',
+    ino: 'text/x-c++src',
+    py:  'text/x-python',
+    js:  'text/javascript',
+    json: 'application/json',
+  };
+
+  const FILETYPE_LABELS = {
+    cpp: 'C++', cc: 'C++', cxx: 'C++', c: 'C', h: 'C/C++ Header',
+    hpp: 'C++ Header', ino: 'Arduino', py: 'Python', js: 'JavaScript',
+    json: 'JSON',
   };
 
   async function openFile(filePath) {
@@ -228,18 +216,43 @@ document.addEventListener('DOMContentLoaded', () => {
               : c.replaceSelection('    ', 'end'),
           },
         });
+
         cm.on('change', () => { unsaved = true; refreshSaveBtn(); });
+
+        cm.on('cursorActivity', () => {
+          if (!ideCursor) return;
+          const cur = cm.getCursor();
+          ideCursor.textContent = `Ln ${cur.line + 1}, Col ${cur.ch + 1}`;
+        });
       }
 
-      cm.setOption('mode', MODE_MAP[filePath.split('.').pop().toLowerCase()] ?? 'text/x-c++src');
+      const ext = filePath.split('.').pop().toLowerCase();
+      cm.setOption('mode', MODE_MAP[ext] ?? 'text/x-c++src');
       cm.setValue(data.content);
       cm.clearHistory();
+      requestAnimationFrame(() => cm.refresh());
 
       currentFile = filePath;
       unsaved     = false;
       refreshSaveBtn();
-      editorTitle.textContent = filePath;
-      showEditor();
+
+      // Show editor, hide welcome screen
+      cmWrap.style.display    = 'block';
+      ideNoFile.style.display = 'none';
+      ideTabName.textContent  = filePath;
+      ideTabDot.style.display = 'none';
+      ideTab.style.display    = 'flex';
+
+      // Update status bar
+      if (ideFiletype) ideFiletype.textContent = FILETYPE_LABELS[ext] ?? ext.toUpperCase();
+
+      // Highlight active file in sidebar
+      document.querySelectorAll('.file-row').forEach(row => {
+        const btn = row.querySelector('.file-row-open');
+        const fname = btn?.querySelector('.fname')?.textContent;
+        const name  = filePath.split('/').pop();
+        row.classList.toggle('active', fname === name && filePath === currentFile);
+      });
 
     } catch (err) {
       console.error('[editor] openFile:', err);
@@ -258,6 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       unsaved = false;
+      ideTabDot.style.display = 'none';
       refreshSaveBtn();
       showSaveStatus('saved', 'ok');
     } catch (err) {
@@ -271,6 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function refreshSaveBtn() {
     saveBtn.classList.toggle('dirty', unsaved);
     saveBtn.textContent = unsaved ? '● SAVE' : 'SAVE';
+    if (ideTabDot) ideTabDot.style.display = unsaved ? 'inline' : 'none';
   }
 
   let _statusTimer;
@@ -286,15 +301,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── Event wiring ───────────────────────────────────────────────────────────
   openBtn.addEventListener('click', openModal);
-  closePicker.addEventListener('click', closeModal);
   closeEditor.addEventListener('click', closeModal);
   saveBtn.addEventListener('click', saveFile);
-  backBtn.addEventListener('click', () => {
-    if (unsaved && !confirm(`Discard unsaved changes to "${currentFile}"?`)) return;
-    unsaved = false;
-    refreshSaveBtn();
-    showPicker();
-  });
 
   toggleNewBtn.addEventListener('click', () =>
     newFileRow.style.display === 'none' ? showNewFileRow() : hideNewFileRow()

@@ -1,41 +1,65 @@
 <div id="editor-modal" style="display:none; position:fixed; inset:0; z-index:9999;
-                background:rgba(0,0,0,0.88); align-items:center; justify-content:center;">
-        <div class="editor-shell">
+            background:rgba(0,0,0,0.92); align-items:center; justify-content:center;">
+    <div class="editor-shell">
 
-            <div id="screen-picker" style="display:flex; flex-direction:column; height:100%;">
-                <div class="modal-bar">
-                    <span class="bar-title">SELECT A FILE TO EDIT</span>
-                    <div class="bar-right">
-                        <button class="bar-new" id="toggle-new-file">+ NEW FILE</button>
-                        <button class="bar-close" id="close-picker">x</button>
-                    </div>
+        <!-- ── Title bar ── -->
+        <div class="ide-titlebar">
+            <div class="ide-titlebar-left">
+                <span class="ide-title">EMBEDDED SOFTWARE</span>
+            </div>
+            <div class="ide-titlebar-right">
+                <span id="save-status" class="save-status"></span>
+                <button class="bar-save" id="save-btn">SAVE</button>
+                <button class="bar-close" id="close-editor">✕</button>
+            </div>
+        </div>
+
+        <!-- ── Main IDE area: sidebar + editor ── -->
+        <div class="ide-layout">
+
+            <!-- Sidebar: always visible file tree -->
+            <aside class="ide-sidebar">
+                <div class="ide-sidebar-header">
+                    <span>EXPLORER</span>
+                    <button class="bar-new" id="toggle-new-file">+</button>
                 </div>
                 <div id="new-file-row" class="new-file-row" style="display:none;">
-                    <input id="new-file-input" class="new-file-input" type="text" placeholder="src/sensors.cpp"
-                        spellcheck="false" autocomplete="off" />
+                    <input id="new-file-input" class="new-file-input" type="text"
+                        placeholder="src/sensors.cpp" spellcheck="false" autocomplete="off" />
                     <button id="new-file-confirm" class="bar-new confirm">CREATE</button>
                     <span id="new-file-err" class="new-file-err"></span>
                 </div>
                 <div id="file-list" class="file-list"></div>
-            </div>
+            </aside>
 
-            <div id="screen-editor" style="display:none; flex-direction:column; height:100%;">
-                <div class="modal-bar">
-                    <div class="bar-left">
-                        <button class="bar-back" id="back-btn">FILES</button>
-                        <span class="bar-file" id="bar-filename"></span>
-                    </div>
-                    <div class="bar-right">
-                        <span id="save-status" class="save-status"></span>
-                        <button class="bar-save" id="save-btn">SAVE</button>
-                        <button class="bar-close" id="close-editor">x</button>
+            <!-- Editor area -->
+            <div class="ide-main">
+                <!-- Open file tab — only shown when a file is open -->
+                <div class="ide-tabs">
+                    <div id="ide-tab" class="ide-tab" style="display:none;">
+                        <span id="bar-filename" class="ide-tab-name"></span>
+                        <span id="ide-tab-dot" class="ide-tab-dot" style="display:none;">●</span>
                     </div>
                 </div>
-                <div class="cm-wrap">
+
+                <!-- Welcome screen — shown when no file is open -->
+                <div id="ide-no-file" class="ide-welcome">
+                    Select a file from the explorer to start editing
+                </div>
+
+                <!-- CodeMirror — hidden until a file is opened -->
+                <div class="cm-wrap" id="cm-wrap" style="display:none;">
                     <textarea id="code-editor"></textarea>
                 </div>
-                <div class="editor-hint">Ctrl+S save | Esc close</div>
-            </div>
 
+                <!-- Status bar -->
+                <div class="ide-statusbar">
+                    <span id="ide-cursor">Ln 1, Col 1</span>
+                    <span id="ide-filetype"></span>
+                    <span>UTF-8</span>
+                </div>
+            </div>
         </div>
+
     </div>
+</div>

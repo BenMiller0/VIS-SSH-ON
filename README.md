@@ -1,6 +1,6 @@
 # VIS-SSH-ON — Remote Monitoring for Embedded Systems
 
-A web-based dashboard for remotely monitoring, testing, and flashing embedded hardware over a network connection. Streams a live RGB camera feed and AMG88xx thermal heatmap to the browser, runs configurable test suites, and lets you edit and flash firmware without leaving the UI.
+A platform for remotely monitoring, testing, and flashing embedded hardware over a network connection. Streams a live RGB camera feed and AMG88xx thermal heatmap to the browser, runs configurable test suites, and lets you edit and flash firmware without leaving the UI.
 
 ---
 
@@ -12,7 +12,6 @@ A web-based dashboard for remotely monitoring, testing, and flashing embedded ha
 | Database           | SQLite (`tests.db`)                         |
 | Hardware           | Picamera2 (RGB) · AMG88xx via I²C (thermal) |
 | Mock hardware      | OpenCV webcam · random thermal data         |
-| Firmware toolchain | PlatformIO                                  |
 | Frontend           | Vanilla JS · CodeMirror 5 · WebSockets      |
 
 ---
@@ -52,7 +51,7 @@ The RGB camera falls back to your system webcam (OpenCV) and thermal data is ran
 - **Visual feedback** — Zoom level badge displayed when zoomed in
 
 ### Flash firmware (`⬡ FLASH CODE`)
-Triggers a PlatformIO build + upload and streams the full `pio run -t upload` output live in a modal. Shows `__OK__` or `__FAIL__` on completion.
+Triggers a build + upload and streams the full output live in a modal. Shows `__OK__` or `__FAIL__` on completion.
 
 > **Every `setup()` must begin with `delay(1500)` or longer** — skipping this causes undefined hardware behaviour on upload.
 
@@ -98,10 +97,7 @@ tip.should_be_near(base, within=80)
 ```bash
 cd embedded_software
 # edit src/main.cpp or any other files in src/
-pio run -t upload
-
-# optional: open serial monitor after flashing
-pio device monitor -b 115200
+# Build and upload firmware using your toolchain
 ```
 
 ---
@@ -125,6 +121,8 @@ pio device monitor -b 115200
 | `POST`       | `/api/tests/{config_id}` | Run a test                |
 | `GET`        | `/api/tests`             | List all test runs        |
 | `DELETE`     | `/api/tests/{run_id}`    | Delete a test run         |
+| `GET`        | `/api/cv-tests`          | List CV test scripts      |
+| `POST`       | `/api/cv-tests/{name}`   | Run a CV test             |
 
 ---
 
@@ -133,26 +131,51 @@ pio device monitor -b 115200
 ```
 .
 ├── main.py                        # FastAPI app entry point
-├── embedded_software/             # PlatformIO project (firmware)
+├── embedded_software/             # Firmware project
 │   └── src/main.cpp
+├── docs/                          # GitHub Pages site
+│   ├── index.html
+│   ├── style.css
+│   └── favicon.svg
 ├── frontend/
+│   ├── routes_pages.py            # (unused)
 │   ├── static/
-│   │   ├── script.js              # WS connections, camera/thermal/test rendering
-│   │   ├── editor.js              # In-browser file editor
-│   │   ├── flash.js               # Flash modal + SSE handling
-│   │   ├── ptz.js                 # PTZ camera control UI and interactions
-│   │   └── style.css
+│   │   ├── js/
+│   │   │   ├── script.js          # WS connections, camera/thermal/test rendering
+│   │   │   ├── editor.js          # In-browser file editor
+│   │   │   ├── flash.js           # Flash modal + SSE handling
+│   │   │   ├── ptz.js             # PTZ camera control UI and interactions
+│   │   │   └── serial.js          # Serial monitor UI
+│   │   ├── css/
+│   │   │   └── style.css
+│   │   └── favicon/
 │   └── templates/
-│       └── index.html
+│       ├── index.html
+│       └── partials/
+│           ├── modal_editor.html
+│           ├── modal_flash.html
+│           ├── modal_serial.html
+│           ├── view_configs.html
+│           ├── view_monitor.html
+│           ├── view_replay.html
+│           ├── view_reports.html
+│           └── view_run.html
 └── backend/
     ├── lifespan.py                # Startup/shutdown, shared camera state
     ├── schemas.py                 # Pydantic models
     ├── api/
     │   ├── routes_camera.py       # PTZ camera control API
     │   ├── routes_configs.py      # Test config CRUD
+    │   ├── routes_cv_tests.py     # CV test execution API
     │   ├── routes_files.py        # File browser API
     │   ├── routes_flash.py        # PIO flash route
     │   └── routes_tests.py        # Test run CRUD + execution
+    ├── cv_tests/
+    │   ├── _helpers.py            # CV test helper utilities
+    │   ├── vis_ssh_on.py          # CV test API
+    │   ├── red_keypoint_test.py
+    │   ├── rotation_test.py
+    │   └── three_red_keypoints_test.py
     ├── database/
     │   ├── database.py            # SQLite access layer
     │   └── tests.db               # Created automatically on first run

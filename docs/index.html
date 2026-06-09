@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VIS-SSH-ON — Remote Monitoring for Embedded Systems</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>VIS-SSH-ON</h1>
+    <div class="header-actions">
+      <a href="https://github.com/BenMiller0/VIS-SSH-ON" class="btn" target="_blank">GitHub</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="hero">
+      <h2>Remote Monitoring for Embedded Systems</h2>
+      <p>A platform for remotely monitoring, testing, and flashing embedded hardware over a network connection.</p>
+    </div>
+
+    <section class="video">
+      <div class="video-container">
+        <iframe width="560" height="315" src="https://www.youtube.com/embed/UM7We8Olw6s" title="VIS-SSH-ON Demo" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+    </section>
+
+    <section class="features">
+      <div class="feature-card">
+        <h3>Live Camera Feeds</h3>
+        <p>Stream RGB camera and AMG88xx thermal heatmap to your browser in real-time</p>
+      </div>
+      <div class="feature-card">
+        <h3>Test Runner</h3>
+        <p>Run configurable test suites with live streaming results and persistence</p>
+      </div>
+      <div class="feature-card">
+        <h3>Flash Firmware</h3>
+        <p>Edit and flash firmware without leaving the browser interface</p>
+      </div>
+      <div class="feature-card">
+        <h3>PTZ Controls</h3>
+        <p>Digital zoom, pan/tilt controls with keyboard, mouse, and touch support</p>
+      </div>
+    </section>
+
+    <section class="tech-stack">
+      <h3>Technology Stack</h3>
+      <div class="tech-grid">
+        <div class="tech-item">
+          <strong>Backend</strong>
+          <span>FastAPI + Uvicorn</span>
+        </div>
+        <div class="tech-item">
+          <strong>Database</strong>
+          <span>SQLite</span>
+        </div>
+        <div class="tech-item">
+          <strong>Hardware</strong>
+          <span>Picamera2 · AMG88xx</span>
+        </div>
+        <div class="tech-item">
+          <strong>Frontend</strong>
+          <span>Vanilla JS · WebSockets</span>
+        </div>
+        <div class="tech-item">
+          <strong>Editor</strong>
+          <span>CodeMirror 5</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="cv-tests">
+      <h3>CV Test Framework</h3>
+      <p>Write computer vision tests using our simple Python API:</p>
+      <div class="code-block">
+        <code>import vis_ssh_on as vis</code>
+        <code></code>
+        <code>green = vis.keypoint("green").should_be_visible(min_area=20)</code>
+        <code>green.should_rotate("clockwise")</code>
+        <code></code>
+        <code>vis.pass_test(x=green.x, y=green.y, area=green.area)</code>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

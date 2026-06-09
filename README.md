@@ -18,24 +18,6 @@ A platform for remotely monitoring, testing, and flashing embedded hardware over
 
 ---
 
-## Running the app
-
-```bash
-# Standard
-python main.py
-
-# Or via uvicorn directly
-uvicorn main:app --host 0.0.0.0 --port 8000
-```
-
-Then open **http://localhost:8000** in any browser on your network.
-
-### Mock / development mode (no Raspberry Pi required)
-
-The RGB camera falls back to your system webcam (OpenCV) and thermal data is randomly generated.
-
----
-
 ## UI features
 
 ### Live feeds
@@ -90,16 +72,6 @@ base = scene.keypoint("base").should_be_visible()
 
 tip.should_be_above(base, by_at_least=10)
 tip.should_be_near(base, within=80)
-```
-
----
-
-## Uploading firmware manually (SSH)
-
-```bash
-cd embedded_software
-# edit src/main.cpp or any other files in src/
-# Build and upload firmware using your toolchain
 ```
 
 ---

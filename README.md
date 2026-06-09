@@ -1,4 +1,4 @@
-# VIS-SSH-ON — Remote Monitoring for Embedded Systems
+# VIS-SSH-ON: Remote Monitoring for Embedded Systems
 
 [View Project Page Here](https://benmiller0.github.io/VIS-SSH-ON/)
 

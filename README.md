@@ -1,5 +1,7 @@
 # VIS-SSH-ON — Remote Monitoring for Embedded Systems
 
+[View Project Page Here](https://benmiller0.github.io/VIS-SSH-ON/)
+
 A platform for remotely monitoring, testing, and flashing embedded hardware over a network connection. Streams a live RGB camera feed and AMG88xx thermal heatmap to the browser, runs configurable test suites, and lets you edit and flash firmware without leaving the UI.
 
 ---
